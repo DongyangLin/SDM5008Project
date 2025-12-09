@@ -8,6 +8,7 @@ from isaaclab.terrains import (
     MeshPyramidStairsTerrainCfg,
     MeshRandomGridTerrainCfg,
     TerrainGeneratorCfg,
+    HfDiscreteObstaclesTerrainCfg,
 )
 
 #############################
@@ -215,4 +216,74 @@ STAIRS_TERRAINS_PLAY_CFG = TerrainGeneratorCfg(
     },
     curriculum=True,
     difficulty_range=(1.0, 1.0),
+)
+
+
+HIM_TERRAINS_CFG = TerrainGeneratorCfg(
+    seed=42,
+    size=(10.0, 10.0),          # HIM论文指定每个地形块为 10x10 m
+    border_width=20.0,
+    num_rows=10,                # 对应论文中的 10 个难度等级 (0-9)
+    num_cols=20,                # 对应论文中的 20 列 (混合不同地形)
+    horizontal_scale=0.1,
+    vertical_scale=0.005,
+    slope_threshold=0.75,
+    use_cache=True,
+    
+    # 启用课程学习，难度从0到1
+    curriculum=True,
+    difficulty_range=(0.0, 1.0),
+    
+    sub_terrains={
+        # 1. 楼梯 (Stairs) - 占比 60% (0.6)
+        # HIM参数: 高度 5-23cm, 宽度 20-40cm
+        "pyramid_stairs": MeshPyramidStairsTerrainCfg(
+            proportion=0.3,
+            step_height_range=(0.05, 0.23), # 严格匹配论文: 5cm - 23cm
+            step_width=0.3,                 # 取论文 20-40cm 的平均值
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+        
+        "inverse_pyramid_stairs": MeshInvertedPyramidStairsTerrainCfg(
+            proportion=0.3,
+            step_height_range=(0.05, 0.23), # 严格匹配论文: 5cm - 23cm
+            step_width=0.3,                 # 取论文 20-40cm 的平均值
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+        
+        # 2. 粗糙斜坡 (Rough Slopes) - 占比 20% (0.2)
+        # HIM参数: 倾角 0-40度 (~0.7 rad)
+        # 注意: IsaacLab标准配置无法直接在PyramidSlope上添加"Uniform Noise"，这里主要保证倾角一致
+        "rough_pyramid_slope": HfPyramidSlopedTerrainCfg(
+            proportion=0.2,
+            slope_range=(0.0, 0.7),         # 40度 * (pi/180) ≈ 0.698 rad
+            platform_width=3.0,
+            border_width=1.0,
+        ),
+        
+        # 3. 平滑斜坡 (Slopes) - 占比 10% (0.1)
+        # HIM参数: 倾角 0-40度
+        "pyramid_slope": HfPyramidSlopedTerrainCfg(
+            proportion=0.1,
+            slope_range=(0.0, 0.7),         # 0-40度
+            platform_width=3.0,
+            border_width=1.0,
+        ),
+        
+        # 4. 离散障碍 (Discrete Obstacles) - 占比 10% (0.1)
+        # HIM参数: 高度 +/- 5cm 到 +/- 15cm
+        "discrete_obstacles": HfDiscreteObstaclesTerrainCfg(
+            proportion=0.1,
+            obstacle_height_mode="choice",
+            obstacle_height_range=(0.05, 0.15), # 严格匹配论文: 5cm - 15cm
+            obstacle_width_range=(0.4, 0.6),    # 设置宽度范围，均值为0.5m
+            platform_width=3.0,
+            border_width=1.0,
+            num_obstacles=40,
+        ),
+    },
 )

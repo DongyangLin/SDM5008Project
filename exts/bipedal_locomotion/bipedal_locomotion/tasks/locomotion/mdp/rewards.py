@@ -311,7 +311,6 @@ def base_com_height(
     # Compute the L2 squared penalty
     return torch.abs(asset.data.root_pos_w[:, 2] - adjusted_target_height)
 
-# Add according to HIM Paper
 def feet_clearance_him(
     env, 
     asset_cfg: SceneEntityCfg, 
@@ -321,16 +320,6 @@ def feet_clearance_him(
     HIM论文中的足部离地高度奖励 (Foot Clearance Reward).
     
     公式: sum((target_height - foot_z_robot_frame)^2 * foot_vel_xy_robot_frame)
-    
-    该奖励旨在惩罚摆动相（速度大）时，足部高度与目标高度的偏差。
-    
-    Args:
-        env: 环境实例
-        asset_cfg: 包含足部body信息的配置 (需指定 body_names)
-        target_height: 期望的抬腿高度 (p_z^target)
-    
-    Returns:
-        torch.Tensor: 奖励值 (shape: [num_envs])
     """
     # 1. 获取资产 (Robot)
     asset = env.scene[asset_cfg.name]
@@ -338,7 +327,10 @@ def feet_clearance_him(
     # 2. 获取足部和基座的 World Frame 状态
     # body_pos_w: (num_envs, num_bodies, 3)
     feet_pos_w = asset.data.body_pos_w[:, asset_cfg.body_ids]
-    feet_vel_w = asset.data.body_vel_w[:, asset_cfg.body_ids]
+    
+    # [修复点] 使用 body_lin_vel_w (3D) 而不是 body_vel_w (6D)
+    # 之前的 body_vel_w 包含角速度，导致 view(-1, 3) 时维度翻倍
+    feet_vel_w = asset.data.body_lin_vel_w[:, asset_cfg.body_ids]
     
     root_pos_w = asset.data.root_pos_w
     root_quat_w = asset.data.root_quat_w
@@ -346,7 +338,7 @@ def feet_clearance_him(
     num_envs = env.num_envs
     num_feet = feet_pos_w.shape[1]
     
-    # 3. 将足部位置转换到 Robot Base Frame (关键步骤，论文明确指出是 robot frame)
+    # 3. 将足部位置转换到 Robot Base Frame
     # 计算相对位置: P_foot_w - P_base_w
     rel_pos_w = feet_pos_w - root_pos_w.unsqueeze(1)  # (N, 4, 3)
     
@@ -364,7 +356,7 @@ def feet_clearance_him(
     feet_z_b = feet_pos_b[:, :, 2] # p_z^i
     
     # 4. 将足部速度转换到 Robot Base Frame 并计算 XY 模长
-    # HIM 论文指出使用 robot frame 的 v_xy
+    # 现在的 feet_vel_w 是 (N, 4, 3)，view(-1, 3) 后是 (N*4, 3)，与 flat_root_quat 匹配
     flat_feet_vel_w = feet_vel_w.view(-1, 3)
     flat_feet_vel_b = quat_rotate_inverse(flat_root_quat, flat_feet_vel_w)
     feet_vel_b = flat_feet_vel_b.view(num_envs, num_feet, 3)
@@ -378,7 +370,6 @@ def feet_clearance_him(
     
     # 6. 最终计算
     # sum( error * velocity_weight )
-    # 只有当脚在移动时（摆动相），误差才会被惩罚
     reward = torch.sum(height_error * feet_vel_xy, dim=1)
     
     return reward
