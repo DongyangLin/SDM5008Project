@@ -41,7 +41,10 @@ import gymnasium as gym
 import os
 import torch
 
+# [修改 1] 导入 HIMOnPolicyRunner
 from rsl_rl.runner import OnPolicyRunner
+
+from rsl_rl.runner import HIMOnPolicyRunner 
 
 from isaaclab.envs import ManagerBasedRLEnvCfg,DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.dict import print_dict
@@ -58,7 +61,10 @@ def main():
     env_cfg: ManagerBasedRLEnvCfg = parse_env_cfg(
         task_name=args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs
     )
-    agent_cfg: RslRlPpoAlgorithmMlpCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
+    
+    # 注意：这里可能需要解析 HIM 的配置类，如果 cli_args.parse_rsl_rl_cfg 返回的是标准配置
+    # 只要 config 字典结构正确，Runner 就能读取
+    agent_cfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
 
     env_cfg.seed = agent_cfg.seed
 
@@ -94,12 +100,18 @@ def main():
     env = RslRlVecEnvWrapper(env)
     # load previously trained model
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-    ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    
+    # [修改 2] 使用 HIMOnPolicyRunner 实例化
+    # ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    ppo_runner = HIMOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+    
     ppo_runner.load(resume_path)
 
     # obtain the trained policy for inference
     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
-    encoder = ppo_runner.get_inference_encoder(device=env.unwrapped.device)
+    
+    # [修改 3] HIM 不需要外部 Encoder (Estimator 内置于 Policy 中)
+    # encoder = ppo_runner.get_inference_encoder(device=env.unwrapped.device)
 
      # 导出策略到onnx / Export policy to onnx
     if EXPORT_POLICY:
@@ -108,42 +120,72 @@ def main():
             ppo_runner.alg.actor_critic, export_model_dir
         )
         print("Exported policy as jit script to: ", export_model_dir)
-        export_mlp_as_onnx(
-            ppo_runner.alg.actor_critic.actor, 
-            export_model_dir, 
-            "policy",
-            ppo_runner.alg.actor_critic.num_actor_obs,
-        )
-        export_mlp_as_onnx(
-            ppo_runner.alg.encoder,
-            export_model_dir,
-            "encoder",
-            ppo_runner.alg.encoder.num_input_dim,
-        )
+        
+        # [修改 4] 导出逻辑可能需要适配 HIM 结构，暂时注释以防报错
+        # export_mlp_as_onnx(
+        #     ppo_runner.alg.actor_critic.actor, 
+        #     export_model_dir, 
+        #     "policy",
+        #     ppo_runner.alg.actor_critic.num_actor_obs,
+        # )
+        # export_mlp_as_onnx(
+        #     ppo_runner.alg.encoder,
+        #     export_model_dir,
+        #     "encoder",
+        #     ppo_runner.alg.encoder.num_input_dim,
+        # )
+        
     # reset environment
-    obs, obs_dict = env.get_observations()
-    obs_history = obs_dict["observations"].get("obsHistory")
+    # [修改 5] 适配 IsaacLab get_observations 返回值
+    obs, extras = env.get_observations()
+    
+    # obs, obs_dict = env.get_observations()
+    # obs_history = obs_dict["observations"].get("obsHistory")
+    
+    # HIM 关键：从 extras 中提取历史并展平
+    obs_history = obs
     obs_history = obs_history.flatten(start_dim=1)
-    commands = obs_dict["observations"].get("commands") 
+    
+    # commands = obs_dict["observations"].get("commands") 
+    
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            est = encoder(obs_history)
-            actions = policy(torch.cat((est, obs, commands), dim=-1).detach())
+            
+            # [修改 6] 策略推断 - HIM 直接接受 obs_history
+            # est = encoder(obs_history)
+            # actions = policy(torch.cat((est, obs, commands), dim=-1).detach())
+            
+            actions = policy(obs_history)
+            
             # env stepping
-            obs, _, _, infos = env.step(actions)
-            obs_history = infos["observations"].get("obsHistory")
+            # [修改 7] 适配 env.step 返回值 (IsaacLab 2.1.0 返回 5 个值)
+            # obs, _, _, infos = env.step(actions)
+            
+            ret = env.step(actions)
+            # 兼容性处理：检查返回值数量
+            if len(ret) == 5:
+                obs, rew, terminated, truncated, extras = ret
+            else:
+                obs, rew, dones, extras = ret # 假设是旧版或 Wrapper 后的 4 值
+            
+            # 更新历史
+            # obs_history = infos["observations"].get("obsHistory")
+            # obs_history = obs_history.flatten(start_dim=1)
+            # commands = infos["observations"].get("commands") 
+            
+            # HIM
+            obs_history = obs
             obs_history = obs_history.flatten(start_dim=1)
-            commands = infos["observations"].get("commands") 
 
     # close the simulator
     env.close()
 
 
 if __name__ == "__main__":
-    EXPORT_POLICY = True
+    EXPORT_POLICY = False # 暂时关闭导出，先跑通推理
     # run the main execution
     main()
     # close sim app

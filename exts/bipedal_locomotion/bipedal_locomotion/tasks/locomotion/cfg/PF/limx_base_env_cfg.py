@@ -274,8 +274,6 @@ class ObservarionsCfg:
         joint_pos = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel = ObsTerm(func=mdp.joint_vel)
         last_action = ObsTerm(func=mdp.last_action)
-        gait_phase = ObsTerm(func=mdp.get_gait_phase)
-        gait_command = ObsTerm(func=mdp.get_gait_command, params={"command_name": "gait_command"})
         
         # --- Part 2: 紧接着必须是 GT Linear Velocity (对应切片 N:N+3) ---
         # 这是 Estimator 训练显式速度估计的 Ground Truth
@@ -335,12 +333,6 @@ class ObservarionsCfg:
             scale=0.05
         )
         last_action = ObsTerm(func=mdp.last_action)
-        gait_phase = ObsTerm(func=mdp.get_gait_phase)
-        gait_command = ObsTerm(
-            func=mdp.get_gait_command, 
-            params={"command_name": "gait_command"}
-        )
-
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True

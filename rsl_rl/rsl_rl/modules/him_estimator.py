@@ -128,7 +128,7 @@ def sinkhorn(out, eps=0.05, iters=3):
         Q /= K
 
         # normalize each column: total weight per sample must be 1/B
-        Q /= torch.sum(Q, dim=0, keepdim=Truenext_critic_obs)
+        Q /= torch.sum(Q, dim=0, keepdim=True)
         Q /= B
     return (Q * B).T
 

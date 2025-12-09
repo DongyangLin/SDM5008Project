@@ -158,7 +158,7 @@ class PF_HIM_PPORunnerCfg(RslRlOnPolicyRunnerCfg):
         entropy_coef=0.01,
         num_learning_epochs=5,
         num_mini_batches=4,             # 论文中 batch size 较大，这里根据显存调整
-        learning_rate=5.0e-4,           # 学习率 [cite: 468]
+        learning_rate=1.0e-3,           # 学习率 [cite: 468]
         schedule="adaptive",
         gamma=0.99,
         lam=0.95,

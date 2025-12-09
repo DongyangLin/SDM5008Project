@@ -302,13 +302,46 @@ class PFHIMEnvCfg(PFBaseEnvCfg):
             clip = (-2.0, 2.0),
         )
         
+        self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        
         # 调整速度命令范围以适应楼梯环境 / Adjust velocity command ranges for stairs environment
         self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 1.0)      
         self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)     
         self.commands.base_velocity.ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
+        self.commands.gait_command = None
         
         self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
         
         self.rewards.pen_feet_regulation = None
         self.rewards.foot_landing_vel = None
+        self.rewards.test_gait_reward = None
         
+@configclass
+class PFHIMPlayEnvCfg(PFBaseEnvCfg_PLAY):
+    def __post_init__(self):
+        super().__post_init__()
+        
+        self.scene.height_scanner = RayCasterCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/base_Link",
+            attach_yaw_only=True,
+            offset = OffsetCfg(pos=(0, 0, 20.0)),
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 0.5]), #TODO: adjust size to fit real robot
+            debug_vis=True,
+            mesh_prim_paths=["/World/ground"],
+        )
+        self.observations.policy.heights = None
+        self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
+            params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
+                      "offset":0.78}, # the defualt height of robot is 0.78m
+            clip = (-2.0, 2.0),
+        )
+        
+        self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        
+        self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.5)      
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)     
+        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+        
+        self.scene.terrain.terrain_type = "generator"
+        self.scene.terrain.max_init_terrain_level = None
+        self.scene.terrain.terrain_generator = STAIRS_TERRAINS_PLAY_CFG.replace(difficulty_range=(0.5, 0.5))

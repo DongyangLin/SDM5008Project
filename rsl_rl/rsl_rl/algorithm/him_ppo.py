@@ -51,7 +51,7 @@ class HIMPPO:
                  use_clipped_value_loss=True,
                  schedule="fixed",
                  desired_kl=0.01,
-                 device='cpu',
+                 device='cuda:0',
                  normalize_advantage_per_mini_batch = False,
                  symmetry_cfg = None,
                  rnd_cfg = None,
