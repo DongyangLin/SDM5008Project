@@ -49,27 +49,27 @@ class HIMOnPolicyRunner:
                  log_dir=None,
                  device='cpu'):
 
-        self.cfg=train_cfg
+        self.cfg = train_cfg
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
         self.device = device
         self.env = env
         
         # 观测信息
-        obs, extras = self.env.get_observations() # obs: (B,H,D)
-        self.num_one_step_obs = obs.shape[2]
-        self.num_actor_obs = obs.shape[1] * obs.shape[2]
+        obs, extras = self.env.get_observations()   # obs: (batch_size, history_length, obs_dim)
+        self.num_one_step_obs = obs.shape[2]   # dim(o^a_t) = 45
+        self.num_actor_obs = obs.shape[1] * obs.shape[2]   # dim(o^a_t-H:t) = 225
         assert "critic" in extras["observations"], f"Critic observations not found in observations"
-        num_critic_obs = extras["observations"]["critic"].shape[1]
+        num_critic_obs = extras["observations"]["critic"].shape[1]   # dim(o^c_t) = 45
         self.num_critic_obs = num_critic_obs
         
-        actor_critic_class = eval(self.policy_cfg.pop("class_name")) # HIMActorCritic
+        actor_critic_class = eval(self.policy_cfg.pop("class_name"))   # HIMActorCritic
         actor_critic: HIMActorCritic = actor_critic_class( self.num_actor_obs,
                                                         self.num_critic_obs,
                                                         self.num_one_step_obs,
                                                         self.env.num_actions,
                                                         **self.policy_cfg).to(self.device)
-        alg_class = eval(self.alg_cfg.pop("class_name")) # HIMPPO
+        alg_class = eval(self.alg_cfg.pop("class_name"))   # HIMPPO
         self.alg: HIMPPO = alg_class(actor_critic, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
@@ -96,7 +96,7 @@ class HIMOnPolicyRunner:
         flattened_obs = obs.flatten(start_dim=1)
         critic_obs = extras["observations"]["critic"]
         flattened_obs, critic_obs = flattened_obs.to(self.device), critic_obs.to(self.device)
-        self.alg.actor_critic.train() # switch to train mode (for dropout for example)
+        self.alg.actor_critic.train()   # switch to train mode (for dropout for example)
 
         ep_infos = []
         rewbuffer = deque(maxlen=100)

@@ -88,13 +88,13 @@ class HIMActorCritic(nn.Module):
 
         activation = get_activation(activation)
 
-        self.history_size = int(num_actor_obs/num_one_step_obs)
-        self.num_actor_obs = num_actor_obs
-        self.num_actions = num_actions
-        self.num_one_step_obs = num_one_step_obs
+        self.history_size = int(num_actor_obs/num_one_step_obs)   # H = 5
+        self.num_actor_obs = num_actor_obs   # dim(o^a_t-H:t) = 225
+        self.num_actions = num_actions   # action dimension
+        self.num_one_step_obs = num_one_step_obs   # dim(o^a_t) = 45
 
-        mlp_input_dim_a = num_one_step_obs + 3 + 16
-        mlp_input_dim_c = num_critic_obs
+        mlp_input_dim_a = num_one_step_obs + 3 + 16   # current obs + vel + latent
+        mlp_input_dim_c = num_critic_obs   # critic obs dimension
 
         # Estimator
         self.estimator = HIMEstimator(temporal_steps=self.history_size, num_one_step_obs=num_one_step_obs)
@@ -170,7 +170,7 @@ class HIMActorCritic(nn.Module):
         mean = self.actor(actor_input)
         self.distribution = Normal(mean, mean*0. + self.std)
 
-    def act(self, obs_history=None, **kwargs):
+    def act(self, obs_history=None, **kwargs):  # Actor
         self.update_distribution(obs_history)
         return self.distribution.sample()
     
@@ -182,6 +182,6 @@ class HIMActorCritic(nn.Module):
         actions_mean = self.actor(torch.cat((obs_history[:, -self.num_one_step_obs:], vel, latent), dim=-1))
         return actions_mean
 
-    def evaluate(self, critic_observations, **kwargs):
+    def evaluate(self, critic_observations, **kwargs):   # Critic
         value = self.critic(critic_observations)
         return value

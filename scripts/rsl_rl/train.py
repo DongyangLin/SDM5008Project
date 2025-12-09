@@ -29,6 +29,7 @@ parser.add_argument("--checkpoint_path", type=str, default=None, help="Relative 
 
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
+
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()

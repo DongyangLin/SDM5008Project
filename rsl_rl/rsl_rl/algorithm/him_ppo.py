@@ -64,9 +64,9 @@ class HIMPPO:
         self.learning_rate = learning_rate
 
         # PPO components
-        self.actor_critic = actor_critic
+        self.actor_critic = actor_critic   # HIMActorCritic
         self.actor_critic.to(self.device)
-        self.storage = None # initialized later
+        self.storage = None   # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = HIMRolloutStorage.Transition()
 
@@ -90,7 +90,7 @@ class HIMPPO:
     def train_mode(self):
         self.actor_critic.train()
 
-    def act(self, obs, critic_obs):
+    def act(self, obs, critic_obs):  # obs: history observations, critic_obs: current observation
         # Compute the actions and values
         self.transition.actions = self.actor_critic.act(obs).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
@@ -152,7 +152,7 @@ class HIMPPO:
                         for param_group in self.optimizer.param_groups:
                             param_group['lr'] = self.learning_rate
 
-                #Estimator Update
+                # Estimator Update
                 estimation_loss, swap_loss = self.actor_critic.estimator.update(obs_batch, next_critic_obs_batch, lr=self.learning_rate)
 
                 # Surrogate loss
