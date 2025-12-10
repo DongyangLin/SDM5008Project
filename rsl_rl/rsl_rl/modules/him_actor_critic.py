@@ -164,8 +164,8 @@ class HIMActorCritic(nn.Module):
         return self.distribution.entropy().sum(dim=-1)
 
     def update_distribution(self, obs_history):
-        with torch.no_grad():
-            vel, latent = self.estimator(obs_history)
+        with torch.no_grad(): # hold the gradient of esitmator
+            vel, latent = self.estimator(obs_history) # estimate vel, and compute l_S
         actor_input = torch.cat((obs_history[:, -self.num_one_step_obs:], vel, latent), dim=-1)
         mean = self.actor(actor_input)
         self.distribution = Normal(mean, mean*0. + self.std)

@@ -2,6 +2,8 @@ import math
 from dataclasses import MISSING
 
 from isaaclab.managers import CommandTermCfg
+from isaaclab.envs.mdp import UniformVelocityCommandCfg
+
 from isaaclab.utils import configclass
 
 from .gait_command import GaitCommand  # Import the GaitCommand class
@@ -31,3 +33,7 @@ class UniformGaitCommandCfg(CommandTermCfg):
 
     resampling_time_range: tuple[float, float] = MISSING
     """Time interval for resampling the gait (in seconds)."""
+    
+@configclass
+class UniformLevelVelocityCommandCfg(UniformVelocityCommandCfg):
+    limit_ranges: UniformVelocityCommandCfg.Ranges = MISSING

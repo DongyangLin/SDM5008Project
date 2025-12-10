@@ -35,6 +35,14 @@ def robot_feet_contact_force(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg)
     contact_force_tensor = contact_sensor.data.net_forces_w_history.to(device)
     return contact_force_tensor.view(contact_force_tensor.shape[0], -1)
 
+def robot_feet_contact_force_current(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg):
+    """contact force of the robot feet (Current Frame Only)"""
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    # 使用 net_forces_w 而不是 net_forces_w_history
+    contact_force_tensor = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids] 
+    
+    # 形状: (num_envs, num_feet, 3) -> (num_envs, num_feet * 3) = 12
+    return contact_force_tensor.view(contact_force_tensor.shape[0], -1)
 
 def robot_mass(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """mass of the robot"""

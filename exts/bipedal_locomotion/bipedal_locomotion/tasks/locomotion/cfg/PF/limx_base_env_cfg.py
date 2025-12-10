@@ -89,7 +89,7 @@ class PFSceneCfg(InteractiveSceneCfg):
 
 
 @configclass
-class CommandCfg(BaseCommandsCfg):
+class CommandCfg:
     # 步态命令配置 / Gait command configuration
     gait_command = mdp.UniformGaitCommandCfg(
         resampling_time_range=(5.0, 5.0),  # 命令重采样时间范围 (固定5秒) / Command resampling time range (fixed 5s)
@@ -101,23 +101,40 @@ class CommandCfg(BaseCommandsCfg):
             swing_height=(0.1, 0.2)     # 摆动高度范围 [m] / Swing height range [m]
         ),
     )
+    
+    base_velocity = mdp.UniformLevelVelocityCommandCfg(
+        asset_name="robot",
+        resampling_time_range=(0.0, 5.0),
+        rel_standing_envs=0.02,
+        rel_heading_envs=1.0,
+        heading_command=False,
+        # heading_control_stiffness = 1.0,
+        debug_vis=False,
+        ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-0.5, 0.5)
+        ),
+        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-1.5, 1.5), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-0.5, 0.5)
+            # lin_vel_x=(0.7, 0.7), lin_vel_y=(0.0,0.0), ang_vel_z=(0.0,0.0)
+        ),
+    )
 
-    """后初始化配置 / Post-initialization configuration"""
-    def __post_init__(self):
-        self.base_velocity.asset_name = "robot"          # 关联的机器人资产名称 / Associated robot asset name
-        self.base_velocity.heading_command = True        # 启用航向命令 / Enable heading commands
-        self.base_velocity.debug_vis = True              # 启用调试可视化 / Enable debug visualization
-        self.base_velocity.heading_control_stiffness = 1.0  # 航向控制刚度 / Heading control stiffness
-        self.base_velocity.resampling_time_range = (0.0, 5.0)  # 速度命令重采样时间 / Velocity command resampling time
-        self.base_velocity.rel_standing_envs = 0.2       # 站立环境比例 / Standing environments ratio
-        self.base_velocity.rel_heading_envs = 0.0        # 航向环境比例 / Heading environments ratio
-        # 速度命令范围设置 / Velocity command ranges
-        self.base_velocity.ranges = mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.5, 1.5),      # 前进速度范围 [m/s] / Forward velocity range [m/s]
-            lin_vel_y=(-1.0, 1.0),      # 横向速度范围 [m/s] / Lateral velocity range [m/s]
-            ang_vel_z=(-0.5, 0.5),      # 转向角速度范围 [rad/s] / Turning angular velocity range [rad/s]
-            heading=(-math.pi, math.pi)  # 航向角范围 [rad] / Heading angle range [rad]
-        )
+    # """后初始化配置 / Post-initialization configuration"""
+    # def __post_init__(self):
+    #     self.base_velocity.asset_name = "robot"          # 关联的机器人资产名称 / Associated robot asset name
+    #     self.base_velocity.heading_command = True        # 启用航向命令 / Enable heading commands
+    #     self.base_velocity.debug_vis = True              # 启用调试可视化 / Enable debug visualization
+    #     self.base_velocity.heading_control_stiffness = 1.0  # 航向控制刚度 / Heading control stiffness
+    #     self.base_velocity.resampling_time_range = (0.0, 5.0)  # 速度命令重采样时间 / Velocity command resampling time
+    #     self.base_velocity.rel_standing_envs = 0.2       # 站立环境比例 / Standing environments ratio
+    #     self.base_velocity.rel_heading_envs = 0.0        # 航向环境比例 / Heading environments ratio
+    #     # 速度命令范围设置 / Velocity command ranges
+    #     self.base_velocity.ranges = mdp.UniformVelocityCommandCfg.Ranges(
+    #         lin_vel_x=(-1.5, 1.5),      # 前进速度范围 [m/s] / Forward velocity range [m/s]
+    #         lin_vel_y=(-1.0, 1.0),      # 横向速度范围 [m/s] / Lateral velocity range [m/s]
+    #         ang_vel_z=(-0.5, 0.5),      # 转向角速度范围 [rad/s] / Turning angular velocity range [rad/s]
+    #         heading=(-math.pi, math.pi)  # 航向角范围 [rad] / Heading angle range [rad]
+    #     )
 
 
 @configclass
@@ -290,7 +307,7 @@ class ObservarionsCfg:
         robot_joint_damping = ObsTerm(func=mdp.robot_joint_damping)
         robot_base_pose = ObsTerm(func=mdp.robot_base_pose)
         robot_feet_contact_force = ObsTerm(
-            func=mdp.robot_feet_contact_force,
+            func=mdp.robot_feet_contact_force_current,
             params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*foot_[LR]_Link")}
         )
         
@@ -533,7 +550,7 @@ class RewardsCfg:
         func=mdp.feet_distance,                     # 足部距离惩罚 / Foot distance penalty
         weight=-10,
         params={
-            "min_feet_distance": 0.115,            # 最小足部距离 / Minimum foot distance
+            "min_feet_distance": 0.12,            # 最小足部距离 / Minimum foot distance
             "feet_links_name": ["foot_[RL]_Link"]  # 足部连杆名称 / Foot link names
         }
     )
@@ -600,6 +617,8 @@ class CurriculumCfg:
 
     # 地形难度课程 / Terrain difficulty curriculum
     terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    
+    lin_vel_cmd_levels = CurrTerm(func=mdp.lin_vel_cmd_levels)
 
 
 ########################

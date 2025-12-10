@@ -33,7 +33,7 @@ class HIMEstimator(nn.Module):
         self.temperature = temperature
 
         # Encoder
-        enc_input_dim = self.temporal_steps * self.num_one_step_obs
+        enc_input_dim = self.temporal_steps * self.num_one_step_obs # History (source)
         enc_layers = []
         for l in range(len(enc_hidden_dims) - 1):
             enc_layers += [nn.Linear(enc_input_dim, enc_hidden_dims[l]), activation]
@@ -42,7 +42,7 @@ class HIMEstimator(nn.Module):
         self.encoder = nn.Sequential(*enc_layers)
 
         # Target
-        tar_input_dim = self.num_one_step_obs
+        tar_input_dim = self.num_one_step_obs # Current (target)
         tar_layers = []
         for l in range(len(tar_hidden_dims)):
             tar_layers += [nn.Linear(tar_input_dim, tar_hidden_dims[l]), activation]
@@ -63,10 +63,11 @@ class HIMEstimator(nn.Module):
 
     def forward(self, obs_history):
         parts = self.encoder(obs_history.detach())
-        vel, z = parts[..., :3], parts[..., 3:]
+        vel, z = parts[..., :3], parts[..., 3:]  # vel, l_S
         z = F.normalize(z, dim=-1, p=2)
         return vel.detach(), z.detach()
 
+    # Same as forward
     def encode(self, obs_history):
         parts = self.encoder(obs_history.detach())
         vel, z = parts[..., :3], parts[..., 3:]
@@ -79,8 +80,8 @@ class HIMEstimator(nn.Module):
             for param_group in self.optimizer.param_groups:
                 param_group['lr'] = self.learning_rate
                 
-        vel = next_critic_obs[:, self.num_one_step_obs:self.num_one_step_obs+3].detach()
-        next_obs = next_critic_obs.detach()[:, 3:self.num_one_step_obs+3]
+        vel = next_critic_obs[:, self.num_one_step_obs:self.num_one_step_obs+3].detach() # ground truth (GT) vel
+        next_obs = next_critic_obs.detach()[:, 3:self.num_one_step_obs+3] # next obs without cmd vel (include GT vel)
 
         z_s = self.encoder(obs_history)
         z_t = self.target(next_obs)
@@ -90,7 +91,7 @@ class HIMEstimator(nn.Module):
         z_t = F.normalize(z_t, dim=-1, p=2)
 
         with torch.no_grad():
-            w = self.proto.weight.data.clone()
+            w = self.proto.weight.data.clone() # weight of prototype
             w = F.normalize(w, dim=-1, p=2)
             self.proto.weight.copy_(w)
 
@@ -104,8 +105,8 @@ class HIMEstimator(nn.Module):
         log_p_s = F.log_softmax(score_s / self.temperature, dim=-1)
         log_p_t = F.log_softmax(score_t / self.temperature, dim=-1)
 
-        swap_loss = -0.5 * (q_s * log_p_t + q_t * log_p_s).mean()
-        estimation_loss = F.mse_loss(pred_vel, vel)
+        swap_loss = -0.5 * (q_s * log_p_t + q_t * log_p_s).mean() # L_SwAG in Paper
+        estimation_loss = F.mse_loss(pred_vel, vel) # estimate the linear velocity
         losses = estimation_loss + swap_loss
 
         self.optimizer.zero_grad()
