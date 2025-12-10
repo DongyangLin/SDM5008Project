@@ -26,9 +26,9 @@ class HIMEstimator(nn.Module):
         super(HIMEstimator, self).__init__()
         activation = get_activation(activation)
 
-        self.temporal_steps = temporal_steps
-        self.num_one_step_obs = num_one_step_obs
-        self.num_latent = enc_hidden_dims[-1]
+        self.temporal_steps = temporal_steps   # H = 5
+        self.num_one_step_obs = num_one_step_obs   # dim(o^a_t) = 45
+        self.num_latent = enc_hidden_dims[-1]   # dim(I_t) = 16
         self.max_grad_norm = max_grad_norm
         self.temperature = temperature
 
@@ -87,7 +87,7 @@ class HIMEstimator(nn.Module):
         z_t = self.target(next_obs)
         pred_vel, z_s = z_s[..., :3], z_s[..., 3:]
 
-        z_s = F.normalize(z_s, dim=-1, p=2)
+        z_s = F.normalize(z_s, dim=-1, p=2)   # normalize latent vectors
         z_t = F.normalize(z_t, dim=-1, p=2)
 
         with torch.no_grad():
@@ -95,18 +95,18 @@ class HIMEstimator(nn.Module):
             w = F.normalize(w, dim=-1, p=2)
             self.proto.weight.copy_(w)
 
-        score_s = z_s @ self.proto.weight.T
+        score_s = z_s @ self.proto.weight.T   # similarity between z_s and prototypes
         score_t = z_t @ self.proto.weight.T
 
         with torch.no_grad():
-            q_s = sinkhorn(score_s)
+            q_s = sinkhorn(score_s)   # soft assignment
             q_t = sinkhorn(score_t)
 
         log_p_s = F.log_softmax(score_s / self.temperature, dim=-1)
         log_p_t = F.log_softmax(score_t / self.temperature, dim=-1)
 
-        swap_loss = -0.5 * (q_s * log_p_t + q_t * log_p_s).mean() # L_SwAG in Paper
-        estimation_loss = F.mse_loss(pred_vel, vel) # estimate the linear velocity
+        swap_loss = -0.5 * (q_s * log_p_t + q_t * log_p_s).mean()   # swap loss
+        estimation_loss = F.mse_loss(pred_vel, vel)   # velocity prediction loss
         losses = estimation_loss + swap_loss
 
         self.optimizer.zero_grad()

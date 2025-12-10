@@ -365,6 +365,7 @@ class ObservarionsCfg:
     critic: HIMCriticCfg = HIMCriticCfg()
     policy: HIMHistoryObsCfg = HIMHistoryObsCfg()
 
+
 @configclass
 class EventsCfg:
     """事件配置类 - 定义训练过程中的随机化事件 / Events configuration class - defines randomization events during training"""
