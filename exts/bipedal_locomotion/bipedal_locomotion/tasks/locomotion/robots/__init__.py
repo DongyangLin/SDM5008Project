@@ -1,6 +1,6 @@
 import gymnasium as gym
 
-from bipedal_locomotion.tasks.locomotion.agents.limx_rsl_rl_ppo_cfg import PF_TRON1AFlatPPORunnerCfg, WF_TRON1AFlatPPORunnerCfg, SF_TRON1AFlatPPORunnerCfg, PF_TRON1AStairPPORunnerCfg, PF_HIM_PPORunnerCfg
+from bipedal_locomotion.tasks.locomotion.agents.limx_rsl_rl_ppo_cfg import PF_TRON1AFlatPPORunnerCfg, WF_TRON1AFlatPPORunnerCfg, SF_TRON1AFlatPPORunnerCfg, PF_TRON1AStairPPORunnerCfg, PF_HIM_PPORunnerCfg, PF_PIM_PPORunnerCfg
 
 from . import limx_pointfoot_env_cfg, limx_wheelfoot_env_cfg, limx_solefoot_env_cfg
 
@@ -17,6 +17,8 @@ limx_sf_blind_flat_runner_cfg = SF_TRON1AFlatPPORunnerCfg()
 limx_pf_stair_runner_cfg = PF_TRON1AStairPPORunnerCfg()
 
 limx_pf_him_stair_runner_cfg = PF_HIM_PPORunnerCfg()
+
+limx_pf_pim_stair_runner_cfg = PF_PIM_PPORunnerCfg()
 
 
 
@@ -104,6 +106,28 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": limx_pointfoot_env_cfg.PFHIMPlayEnvCfg,
         "rsl_rl_cfg_entry_point": limx_pf_him_stair_runner_cfg,
+    },
+)
+
+# PIM
+gym.register(
+    id="Isaac-Limx-PF-Stair-PIM-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": limx_pointfoot_env_cfg.PFPIMEnvCfg,
+        "rsl_rl_cfg_entry_point": limx_pf_pim_stair_runner_cfg,
+    },
+)
+
+# PIM Play
+gym.register(
+    id="Isaac-Limx-PF-Stair-PIM-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": limx_pointfoot_env_cfg.PFPIMPlayEnvCfg,
+        "rsl_rl_cfg_entry_point": limx_pf_pim_stair_runner_cfg,
     },
 )
 

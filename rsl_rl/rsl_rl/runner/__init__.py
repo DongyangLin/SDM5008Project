@@ -4,4 +4,5 @@
 """Implementation of runners for environment-agent interaction."""
 from .on_policy_runner import OnPolicyRunner
 from .him_on_policy_runner import HIMOnPolicyRunner
+from .pim_on_policy_runner import PIMOnPolicyRunner
 
