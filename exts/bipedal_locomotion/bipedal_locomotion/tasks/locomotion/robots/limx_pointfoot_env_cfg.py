@@ -70,6 +70,8 @@ class PFBaseEnvCfg_PLAY(PFBaseEnvCfg):
         self.events.push_robot = None
         # remove random base mass addition event
         self.events.add_base_mass = None
+        
+        self.curriculum.lin_vel_cmd_levels=None
 
 
 ############################
@@ -307,7 +309,7 @@ class PFHIMEnvCfg(PFBaseEnvCfg):
         self.observations.policy.heights = None
         self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, 
+                      "offset":0.68}, 
             clip = (-2.0, 2.0),
         )
         
@@ -316,6 +318,7 @@ class PFHIMEnvCfg(PFBaseEnvCfg):
         self.commands.base_velocity.limit_ranges.lin_vel_x = (-0.2, 1.0)      
         self.commands.base_velocity.limit_ranges.lin_vel_y = (-0.2, 0.2)     
         self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
+        self.commands.base_velocity.ranges.lin_vel_x=(-0.5, 0.5)
         self.commands.gait_command = None
 
         # =========================================================================
@@ -399,7 +402,7 @@ class PFHIMEnvCfg(PFBaseEnvCfg):
         self.rewards.foot_landing_vel = None
         self.rewards.test_gait_reward = None
         # self.rewards.pen_feet_distance = None # Not in Table 5
-        self.rewards.pen_feet_distance.weight=-5.0
+        self.rewards.pen_feet_distance.weight=-50.0
         self.rewards.pen_undesired_contacts = None # Not in Table 5 (though often kept for safety, strictly HIM doesn't list it)
         self.rewards.pen_joint_pos_limits = None # Not in Table 5
         self.rewards.pen_joint_vel_l2 = None # Not in Table 5 (covered by power/smoothness)
@@ -418,8 +421,8 @@ class PFHIMPlayEnvCfg(PFBaseEnvCfg_PLAY):
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
             attach_yaw_only=True,
             offset = OffsetCfg(pos=(0, 0, 20.0)),
-            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 0.5]), #TODO: adjust size to fit real robot
-            debug_vis=True,
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 1.0]), #TODO: adjust size to fit real robot
+            debug_vis=False,
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = None
@@ -434,6 +437,7 @@ class PFHIMPlayEnvCfg(PFBaseEnvCfg_PLAY):
         self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.5)      
         self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)     
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+        self.commands.base_velocity.debug_vis = True
         
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.max_init_terrain_level = None
