@@ -75,6 +75,7 @@ def lin_vel_cmd_levels(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
     reward_term_name: str = "rew_lin_vel_xy",
+    delta_vel: float = 0.2
 ) -> torch.Tensor:
     command_term = env.command_manager.get_term("base_velocity")
     ranges = command_term.cfg.ranges
@@ -85,7 +86,7 @@ def lin_vel_cmd_levels(
 
     if env.common_step_counter % env.max_episode_length == 0:
         if reward > reward_term.weight * 0.8:
-            delta_command = torch.tensor([-0.2, 0.2], device=env.device)
+            delta_command = torch.tensor([-delta_vel, delta_vel], device=env.device)
             ranges.lin_vel_x = torch.clamp(
                 torch.tensor(ranges.lin_vel_x, device=env.device) + delta_command,
                 limit_ranges.lin_vel_x[0],
@@ -106,15 +107,7 @@ def terrain_levels_vel_constrained(
     reward_term_name: str = "rew_lin_vel_xy"
 ) -> torch.Tensor:
     """
-    基于行走距离和群体速度跟踪精度的地形课程。
-    
-    升级条件 (move_up):
-    1. 个体条件：机器人行走的距离超过地形块长度的一半。
-    2. 群体条件（参考 lin_vel_cmd_levels）：该批次环境的平均速度跟踪奖励超过最大值的 80%。
-       这意味着只有当整体策略在当前难度下表现稳定时，才允许个体尝试更难的地形。
-    
-    降级条件 (move_down):
-    1. 个体条件：机器人行走的距离小于指令速度理论距离的 50%。
+    基于行走距离和个体速度跟踪精度的地形课程。
     """
     # 提取对象
     asset: Articulation = env.scene[asset_cfg.name]
@@ -124,31 +117,29 @@ def terrain_levels_vel_constrained(
     # 1. 计算行走距离 (个体指标)
     distance = torch.norm(asset.data.root_pos_w[env_ids, :2] - env.scene.env_origins[env_ids, :2], dim=1)
     
-    # 2. 原始升级条件：距离达标
+    # 2. 原始升级条件：距离达标 (Tensor boolean)
     move_up = distance > terrain.cfg.terrain_generator.size[0] / 2
     
-    # 3. [修改] 速度奖励约束 (采用 lin_vel_cmd_levels 的逻辑)
+    # 3. [修改] 速度奖励约束 (个体级判断)
     try:
-        # 获取奖励配置
         reward_term = env.reward_manager.get_term_cfg(reward_term_name)
         
-        # 计算该批次环境的平均每步奖励 (与 lin_vel_cmd_levels 逻辑一致)
-        # mean( sum(r) ) / max_time
-        avg_reward = torch.mean(env.reward_manager._episode_sums[reward_term_name][env_ids]) / env.max_episode_length_s
+        # [修改] 获取每个环境单独的奖励密度 (Tensor)
+        # 形状: (len(env_ids), )
+        per_env_reward = env.reward_manager._episode_sums[reward_term_name][env_ids] / env.max_episode_length_s
         
-        # 判定标准：整体表现 > 80% 满分
-        # 注意：这里是一个标量布尔值
-        tracking_pass = avg_reward > reward_term.weight * 0.8
+        # [修改] 个体判定标准：每个机器人自己跟自己比
+        # 生成形状相同的布尔 Tensor
+        tracking_pass = per_env_reward > (reward_term.weight * 0.8)
         
-        # 组合条件：个体走得远 AND 整体策略跟踪好
-        # 如果 tracking_pass 为 False，所有环境的 move_up 都会被置为 False
-        if not tracking_pass:
-            move_up[:] = False
+        # [修改] 组合条件：逐元素逻辑与 (Element-wise AND)
+        # 只有距离够远(&)且跟踪够好(&)的那个机器人，它的 move_up 才为 True
+        move_up = move_up & tracking_pass
             
     except KeyError:
-        print(f"[Warning] terrain_levels_vel_constrained: Reward term '{reward_term_name}' not found. Skipping tracking constraint.")
+        print(f"[Warning] terrain_levels: Reward term '{reward_term_name}' not found.")
     except Exception as e:
-        print(f"[Error] terrain_levels_vel_constrained: {e}")
+        print(f"[Error] terrain_levels: {e}")
 
     # 4. 降级条件 (个体指标)
     target_dist = torch.norm(command[env_ids, :2], dim=1) * env.max_episode_length_s

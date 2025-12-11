@@ -313,8 +313,10 @@ class PFHIMEnvCfg(PFBaseEnvCfg):
         self.commands.base_velocity.limit_ranges.lin_vel_x = (-0.2, 1.0)      
         self.commands.base_velocity.limit_ranges.lin_vel_y = (-0.2, 0.2)     
         self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
-        self.commands.base_velocity.ranges.lin_vel_x=(-0.5, 0.5)
-        self.commands.gait_command = None
+        self.commands.base_velocity.ranges.lin_vel_x=(-0.5, 0.5) # higher vel at beginning
+        # self.commands.gait_command = None
+        
+        self.curriculum.terrain_levels.func = mdp.terrain_levels_vel_constrained
 
         # =========================================================================
         # REWARD MODIFICATIONS (Strictly following HIM Table 5)
@@ -365,7 +367,7 @@ class PFHIMEnvCfg(PFBaseEnvCfg):
         # Ensure target matches your robot. 
         # Using height scanner to compute height relative to terrain.
         self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
-        self.rewards.pen_base_height.params["target_height"] = 0.78
+        self.rewards.pen_base_height.params["target_height"] = 0.68
 
         # 9. Foot clearance 
         # Eq: sum((p_z_target - p_z)^2 * v_xy)
@@ -395,7 +397,7 @@ class PFHIMEnvCfg(PFBaseEnvCfg):
         # HIM does not use these specific regularization terms
         self.rewards.pen_feet_regulation = None
         self.rewards.foot_landing_vel = None
-        self.rewards.test_gait_reward = None
+        # self.rewards.test_gait_reward = None
         # self.rewards.pen_feet_distance = None # Not in Table 5
         self.rewards.pen_feet_distance.weight=-50.0
         self.rewards.pen_undesired_contacts = None # Not in Table 5 (though often kept for safety, strictly HIM doesn't list it)

@@ -66,7 +66,7 @@ class GaitCommand(CommandTerm):
         # -- contact duration
         self.gait_command[env_ids, 2] = r.uniform_(*self.cfg.ranges.durations)
         # -- swing height
-        self.gait_command[env_ids, 3] = r.uniform_(*self.cfg.ranges.swing_height)
+        # self.gait_command[env_ids, 3] = r.uniform_(*self.cfg.ranges.swing_height)
 
     def _update_command(self):
         """Update the command. No additional processing needed in this implementation."""
