@@ -166,6 +166,49 @@ class PF_HIM_PPORunnerCfg(RslRlOnPolicyRunnerCfg):
         max_grad_norm=1.0,
     )
 
+
+# PIM Config
+@configclass
+class PF_PIM_PPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    # [Runner Settings]
+    # 指定使用自定义的 PIM Runner (必须与 pim_on_policy_runner.py 中的类名一致)
+    runner_class_name = "PIMOnPolicyRunner" 
+    
+    num_steps_per_env = 100       # PIM 论文推荐 100 步  / PIM paper recommends 100 steps
+    max_iterations = 20000        # 训练迭代次数 / Max training iterations
+    save_interval = 200            # 保存间隔 / Save interval
+    experiment_name = "pf_pim_stair"
+    empirical_normalization = False   # PIM 不使用经验归一化 / PIM does not use empirical normalization
+    
+    # [Policy Settings]
+    # 使用自定义的 PIM 策略网络
+    policy = RslRlPpoActorCriticCfg(
+        class_name="PIMActorCritic", # 对应 pim_actor_critic.py 中的类名
+        init_noise_std=1.0,          # 初始噪声标准差 [cite: 468]
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 128],
+        activation="elu",
+    )
+
+    # [Algorithm Settings]
+    # 使用自定义的 PIM PPO 算法
+    algorithm = RslRlPpoAlgorithmCfg(
+        class_name="PIMPPO",            # 对应 pim_ppo.py 中的类名
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.01,
+        num_learning_epochs=5,
+        num_mini_batches=4,             # 论文中 batch size 较大，这里根据显存调整
+        learning_rate=1.0e-3,           # 学习率 [cite: 468]
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+    )
+
+
 #-----------------------------------------------------------------
 @configclass
 class SF_TRON1AFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):

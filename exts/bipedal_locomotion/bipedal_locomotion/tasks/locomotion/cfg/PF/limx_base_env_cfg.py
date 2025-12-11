@@ -360,14 +360,114 @@ class ObservarionsCfg:
             self.history_length = 5  # 必须与 algorithm.obs_history_len 一致
             self.flatten_history_dim = False
     
+    @configclass
+    class PIMCriticCfg(ObsGroup):
+        # --- Part 1: 完全复制 HistoryObsCfg 的内容 (对应 N) ---
+        # 必须包含 Commands，以此保证维度对齐
+        velocity_commands = ObsTerm(
+            func=mdp.generated_commands, 
+            params={"command_name": "base_velocity"}
+        )
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
+        proj_gravity = ObsTerm(func=mdp.projected_gravity)
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel)
+        joint_vel = ObsTerm(func=mdp.joint_vel)
+        last_action = ObsTerm(func=mdp.last_action)
+        
+        # --- Part 2: 紧接着必须是 GT Linear Velocity (对应切片 N:N+3) ---
+        # 这是 Estimator 训练显式速度估计的 Ground Truth
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel) 
+
+        # --- Part 3: 其他特权信息 (Privileged Info) ---
+        # 这里的顺序不敏感，只要在 vel 后面即可
+        # heights = ObsTerm(
+        #     func=mdp.height_scan,
+        #     params={"sensor_cfg": SceneEntityCfg("height_scanner")}
+        # )
+        robot_mass = ObsTerm(func=mdp.robot_mass)
+        robot_joint_stiffness = ObsTerm(func=mdp.robot_joint_stiffness)
+        robot_joint_damping = ObsTerm(func=mdp.robot_joint_damping)
+        robot_base_pose = ObsTerm(func=mdp.robot_base_pose)
+        robot_feet_contact_force = ObsTerm(
+            func=mdp.robot_feet_contact_force_current,
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*foot_[LR]_Link")}
+        )
+        
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = True
+    
+    @configclass
+    class PIMHistoryObsCfg(ObsGroup):
+        # 1. Commands (必须在最前面！占用索引 0-2)
+        # 对应代码切片 [:, 3:N+3] 中的 "3" 是为了跳过这部分
+        velocity_commands = ObsTerm(
+            func=mdp.generated_commands, 
+            params={"command_name": "base_velocity"}
+        )
+        
+        # 2. Proprioception (本体感知)
+        base_ang_vel = ObsTerm(
+            func=mdp.base_ang_vel, 
+            noise=GaussianNoise(mean=0.0, std=0.05),
+            clip=(-100.0, 100.0),
+            scale=0.25
+        )
+        proj_gravity = ObsTerm(
+            func=mdp.projected_gravity, 
+            noise=GaussianNoise(mean=0.0, std=0.025),
+            clip=(-100.0, 100.0),
+            scale=1.0
+        )
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel, 
+            noise=GaussianNoise(mean=0.0, std=0.01),
+            clip=(-100.0, 100.0),
+            scale=1.0
+        )
+        joint_vel = ObsTerm(
+            func=mdp.joint_vel, 
+            noise=GaussianNoise(mean=0.0, std=0.01),
+            clip=(-100.0, 100.0),
+            scale=0.05
+        )
+        last_action = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = True
+            self.history_length = 5  # 必须与 algorithm.obs_history_len 一致
+            self.flatten_history_dim = False
+    
+    @configclass
+    class PIMHeightScanObsCfg(ObsGroup):
+        """高度扫描观测组配置 - 包含来自高度扫描传感器的信息 / Height scan observation group - includes information from height scanner sensor"""
+        
+        heights = ObsTerm(
+            func=mdp.height_scan,
+            params={"sensor_cfg": SceneEntityCfg("height_scanner")}
+        )
+        
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = True
+            self.history_length = 5  # 必须与 algorithm.obs_history_len 一致
+            self.flatten_history_dim = False
+
+
     # policy: PolicyCfg = PolicyCfg()
     # critic: CriticCfg = CriticCfg()
     # commands: CommandsObsCfg = CommandsObsCfg()
     # obsHistory: HistoryObsCfg = HistoryObsCfg()
     
     # HIM:
-    critic: HIMCriticCfg = HIMCriticCfg()
-    policy: HIMHistoryObsCfg = HIMHistoryObsCfg()
+    # critic: HIMCriticCfg = HIMCriticCfg()
+    # policy: HIMHistoryObsCfg = HIMHistoryObsCfg()
+
+    # PIM:
+    critic: PIMCriticCfg = PIMCriticCfg()
+    policy: PIMHistoryObsCfg = PIMHistoryObsCfg()
+    perceptive: PIMHeightScanObsCfg = PIMHeightScanObsCfg()
 
 
 @configclass
