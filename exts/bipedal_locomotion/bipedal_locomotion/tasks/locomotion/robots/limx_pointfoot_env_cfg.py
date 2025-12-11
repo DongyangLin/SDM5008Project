@@ -4,6 +4,7 @@ from isaaclab.utils import configclass
 
 from bipedal_locomotion.assets.config.pointfoot_cfg import POINTFOOT_CFG
 from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFEnvCfg
+from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_pim_base_env_cfg import PFPIMBasedEnvCfg, PFPIMBaseEnvCfg_PLAY
 from bipedal_locomotion.tasks.locomotion.cfg.PF.terrains_cfg import (
     BLIND_ROUGH_TERRAINS_CFG,
     BLIND_ROUGH_TERRAINS_PLAY_CFG,
@@ -451,7 +452,7 @@ class PFHIMPlayEnvCfg(PFBaseEnvCfg_PLAY):
 #############################
 
 @configclass
-class PFPIMEnvCfg(PFBaseEnvCfg):
+class PFPIMEnvCfg(PFPIMBasedEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         
@@ -574,7 +575,7 @@ class PFPIMEnvCfg(PFBaseEnvCfg):
         
         
 @configclass
-class PFPIMPlayEnvCfg(PFBaseEnvCfg_PLAY):
+class PFPIMPlayEnvCfg(PFPIMBaseEnvCfg_PLAY):
     def __post_init__(self):
         super().__post_init__()
         

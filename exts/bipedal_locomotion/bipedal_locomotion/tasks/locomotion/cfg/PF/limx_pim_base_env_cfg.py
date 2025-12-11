@@ -21,72 +21,12 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as UniformNoise
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import CommandsCfg as BaseCommandsCfg
 
 from bipedal_locomotion.tasks.locomotion import mdp
-
-##################
-# 场景定义 / Scene Definition
-##################
-
-
-@configclass
-class PFSceneCfg(InteractiveSceneCfg):
-    """测试场景配置类 / Configuration for the test scene"""
-
-    # 地形配置 / Terrain configuration
-    terrain = TerrainImporterCfg(
-        prim_path="/World/ground",      # 地形在场景中的路径 / Terrain path in scene
-        terrain_type="plane",           # 地形类型：平面 / Terrain type: plane
-        terrain_generator=None,         # 不使用地形生成器 / No terrain generator used
-        max_init_terrain_level=0,       # 最大初始地形难度等级 / Maximum initial terrain difficulty level
-        collision_group=-1,             # 碰撞组ID / Collision group ID
-
-        # 物理材质属性 / Physics material properties
-        physics_material=RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",    # 摩擦力结合模式：乘法 / Friction combine mode: multiply
-            restitution_combine_mode="multiply", # 恢复系数结合模式：乘法 / Restitution combine mode: multiply
-            static_friction=1.0,                # 静摩擦系数 / Static friction coefficient
-            dynamic_friction=1.0,               # 动摩擦系数 / Dynamic friction coefficient
-            restitution=1.0,                    # 恢复系数 / Restitution coefficient
-        ),
-
-        # 视觉材质配置 / Visual material configuration
-        visual_material=MdlFileCfg(
-            mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/"
-            + "TilesMarbleSpiderWhiteBrickBondHoned.mdl",  # 大理石纹理材质路径 / Marble texture material path
-            project_uvw=True,              # 启用UV投影 / Enable UV projection
-            texture_scale=(0.25, 0.25),    # 纹理缩放比例 / Texture scaling factor
-        ),
-        debug_vis=False,   # 不显示调试可视化 / Don't show debug visualization
-    )
-
-    # 天空光照配置 / Sky lighting configuration
-    light = AssetBaseCfg(
-        prim_path="/World/skyLight",
-        spawn=DomeLightCfg(
-            intensity=750.0,
-            color=(0.9, 0.9, 0.9),
-            texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
-        ),
-    )
-
-    # pointfoot robot
-    robot: ArticulationCfg = MISSING
-
-    # 高度扫描传感器 (将在子类中定义) / Height scanner sensor (to be defined in subclasses)
-    height_scanner: RayCasterCfg = MISSING
-
-    # 接触力传感器配置 / Contact force sensor configuration
-    contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*",  # 传感器安装路径 / Sensor attachment path
-        history_length=4,                     # 历史数据长度 / History data length
-        track_air_time=True,                  # 跟踪空中时间 / Track air time
-        update_period=0.0,                    # 更新周期 (0表示每帧更新) / Update period (0 means every frame)
-    )
+from .limx_base_env_cfg import PFSceneCfg
 
 
 ##############
 # MDP设置 / MDP Settings
 ##############
-
 
 @configclass
 class CommandCfg:
@@ -119,23 +59,6 @@ class CommandCfg:
         ),
     )
 
-    # """后初始化配置 / Post-initialization configuration"""
-    # def __post_init__(self):
-    #     self.base_velocity.asset_name = "robot"          # 关联的机器人资产名称 / Associated robot asset name
-    #     self.base_velocity.heading_command = True        # 启用航向命令 / Enable heading commands
-    #     self.base_velocity.debug_vis = True              # 启用调试可视化 / Enable debug visualization
-    #     self.base_velocity.heading_control_stiffness = 1.0  # 航向控制刚度 / Heading control stiffness
-    #     self.base_velocity.resampling_time_range = (0.0, 5.0)  # 速度命令重采样时间 / Velocity command resampling time
-    #     self.base_velocity.rel_standing_envs = 0.2       # 站立环境比例 / Standing environments ratio
-    #     self.base_velocity.rel_heading_envs = 0.0        # 航向环境比例 / Heading environments ratio
-    #     # 速度命令范围设置 / Velocity command ranges
-    #     self.base_velocity.ranges = mdp.UniformVelocityCommandCfg.Ranges(
-    #         lin_vel_x=(-1.5, 1.5),      # 前进速度范围 [m/s] / Forward velocity range [m/s]
-    #         lin_vel_y=(-1.0, 1.0),      # 横向速度范围 [m/s] / Lateral velocity range [m/s]
-    #         ang_vel_z=(-0.5, 0.5),      # 转向角速度范围 [rad/s] / Turning angular velocity range [rad/s]
-    #         heading=(-math.pi, math.pi)  # 航向角范围 [rad] / Heading angle range [rad]
-    #     )
-
 
 @configclass
 class ActionsCfg:
@@ -155,133 +78,105 @@ class ActionsCfg:
 @configclass
 class ObservarionsCfg:
     """观测规范配置类 / Observation specifications configuration class"""
-
-    @configclass
-    class PolicyCfg(ObsGroup):
-        """策略网络观测组配置 / Policy network observation group configuration"""
-
-        # 机器人基座测量 / Robot base measurements
-        base_ang_vel = ObsTerm(
-            func=mdp.base_ang_vel,              # 基座角速度函数 / Base angular velocity function
-            noise=GaussianNoise(mean=0.0, std=0.05),  # 高斯噪声 / Gaussian noise
-            clip=(-100.0, 100.0),               # 数值裁剪范围 / Value clipping range
-            scale=0.25,                         # 缩放因子 / Scaling factor
-        )
-        proj_gravity = ObsTerm(
-            func=mdp.projected_gravity,         # 投影重力函数 / Projected gravity function
-            noise=GaussianNoise(mean=0.0, std=0.025),  # 噪声配置 / Noise configuration
-            clip=(-100.0, 100.0),               # 裁剪范围 / Clipping range
-            scale=1.0,                          # 缩放因子 / Scaling factor
-        )
-
-        # 机器人关节测量 / Robot joint measurements
-        joint_pos = ObsTerm(
-            func=mdp.joint_pos_rel,            # 关节位置函数 / Joint position function
-            noise=GaussianNoise(mean=0.0, std=0.01),  # 噪声配置 / Noise configuration
-            clip=(-100.0, 100.0),               # 裁剪范围 / Clipping range
-            scale=1.0,                          # 缩放因子 / Scaling factor
-        )
-        joint_vel = ObsTerm(
-            func=mdp.joint_vel,                 # 关节速度函数 / Joint velocity function
-            noise=GaussianNoise(mean=0.0, std=0.01),  # 噪声配置 / Noise configuration
-            clip=(-100.0, 100.0),               # 裁剪范围 / Clipping range
-            scale=0.05,                         # 缩放因子 / Scaling factor
-        )
-
-        # 上一步动作 / Last action
-        last_action = ObsTerm(func=mdp.last_action)
-
-        # 步态相关观测 / Gait-related observations
-        gait_phase = ObsTerm(func=mdp.get_gait_phase)  # 步态相位 / Gait phase
-        gait_command = ObsTerm(
-            func=mdp.get_gait_command, 
-            params={"command_name": "gait_command"}  # 步态命令 / Gait command
-        )
-        
-        heights = ObsTerm(func=mdp.height_scan,params={"sensor_cfg": SceneEntityCfg("height_scanner")})
-        
-        def __post_init__(self):
-            self.enable_corruption = True      # 启用观测损坏 / Enable observation corruption
-            self.concatenate_terms = True      # 连接所有观测项 / Concatenate all observation terms
     
     @configclass
-    class HistoryObsCfg(ObsGroup):
-        """历史观测组配置 - 用于存储观测历史 / History observation group - for storing observation history"""
+    class PIMCriticCfg(ObsGroup):
+        # --- Part 1: 完全复制 HistoryObsCfg 的内容 (对应 N) ---
+        # 必须包含 Commands，以此保证维度对齐
+        velocity_commands = ObsTerm(
+            func=mdp.generated_commands, 
+            params={"command_name": "base_velocity"}
+        )
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
+        proj_gravity = ObsTerm(func=mdp.projected_gravity)
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel)
+        joint_vel = ObsTerm(func=mdp.joint_vel)
+        last_action = ObsTerm(func=mdp.last_action)
+        
+        # --- Part 2: 紧接着必须是 GT Linear Velocity (对应切片 N:N+3) ---
+        # 这是 Estimator 训练显式速度估计的 Ground Truth
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel) 
 
-        # robot base measurements
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=GaussianNoise(mean=0.0, std=0.05),clip=(-100.0, 100.0),scale=0.25,)
-        proj_gravity = ObsTerm(func=mdp.projected_gravity, noise=GaussianNoise(mean=0.0, std=0.025),clip=(-100.0, 100.0),scale=1.0,)
-
-        # robot joint measurements
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=GaussianNoise(mean=0.0, std=0.01),clip=(-100.0, 100.0),scale=1.0,)
-        joint_vel = ObsTerm(func=mdp.joint_vel, noise=GaussianNoise(mean=0.0, std=0.01),clip=(-100.0, 100.0),scale=0.05,)
-
-        # last action
+        # --- Part 3: 其他特权信息 (Privileged Info) ---
+        # 这里的顺序不敏感，只要在 vel 后面即可
+        # heights = ObsTerm(
+        #     func=mdp.height_scan,
+        #     params={"sensor_cfg": SceneEntityCfg("height_scanner")}
+        # )
+        robot_mass = ObsTerm(func=mdp.robot_mass)
+        robot_joint_stiffness = ObsTerm(func=mdp.robot_joint_stiffness)
+        robot_joint_damping = ObsTerm(func=mdp.robot_joint_damping)
+        robot_base_pose = ObsTerm(func=mdp.robot_base_pose)
+        robot_feet_contact_force = ObsTerm(
+            func=mdp.robot_feet_contact_force_current,
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*foot_[LR]_Link")}
+        )
+        
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = True
+    
+    @configclass
+    class PIMHistoryObsCfg(ObsGroup):
+        # 1. Commands (必须在最前面！占用索引 0-2)
+        # 对应代码切片 [:, 3:N+3] 中的 "3" 是为了跳过这部分
+        velocity_commands = ObsTerm(
+            func=mdp.generated_commands, 
+            params={"command_name": "base_velocity"}
+        )
+        
+        # 2. Proprioception (本体感知)
+        base_ang_vel = ObsTerm(
+            func=mdp.base_ang_vel, 
+            noise=GaussianNoise(mean=0.0, std=0.05),
+            clip=(-100.0, 100.0),
+            scale=0.25
+        )
+        proj_gravity = ObsTerm(
+            func=mdp.projected_gravity, 
+            noise=GaussianNoise(mean=0.0, std=0.025),
+            clip=(-100.0, 100.0),
+            scale=1.0
+        )
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel, 
+            noise=GaussianNoise(mean=0.0, std=0.01),
+            clip=(-100.0, 100.0),
+            scale=1.0
+        )
+        joint_vel = ObsTerm(
+            func=mdp.joint_vel, 
+            noise=GaussianNoise(mean=0.0, std=0.01),
+            clip=(-100.0, 100.0),
+            scale=0.05
+        )
         last_action = ObsTerm(func=mdp.last_action)
 
-        # gaits
-        gait_phase = ObsTerm(func=mdp.get_gait_phase)
-        gait_command = ObsTerm(func=mdp.get_gait_command, params={"command_name": "gait_command"})
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = True
+            self.history_length = 5  # 必须与 algorithm.obs_history_len 一致
+            self.flatten_history_dim = False
+    
+    @configclass
+    class PIMHeightScanObsCfg(ObsGroup):
+        """高度扫描观测组配置 - 包含来自高度扫描传感器的信息 / Height scan observation group - includes information from height scanner sensor"""
+        
+        heights = ObsTerm(
+            func=mdp.height_scan,
+            params={"sensor_cfg": SceneEntityCfg("height_scanner")}
+        )
         
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True
-            self.history_length = 10          # 历史长度为10步 / History length of 10 steps
-            self.flatten_history_dim = False  # 不展平历史维度 / Don't flatten history dimension
+            self.history_length = 5  # 必须与 algorithm.obs_history_len 一致
+            self.flatten_history_dim = False
 
-    @configclass
-    class CriticCfg(ObsGroup):
-        """评价网络观测组配置 - 包含特权信息 / Critic network observation group - includes privileged information"""
-
-        # 策略观测 (与智能体相同) / Policy observations (same as agent)
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
-        proj_gravity = ObsTerm(func=mdp.projected_gravity)
-
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel)
-        joint_vel = ObsTerm(func=mdp.joint_vel)
-
-        last_action = ObsTerm(func=mdp.last_action)
-
-        gait_phase = ObsTerm(func=mdp.get_gait_phase)
-        gait_command = ObsTerm(func=mdp.get_gait_command, params={"command_name": "gait_command"})
-
-        heights = ObsTerm(func=mdp.height_scan,params={"sensor_cfg": SceneEntityCfg("height_scanner")})
-        
-        # 特权观测 (仅评价网络可见) / Privileged observations (only visible to critic)
-        robot_joint_torque = ObsTerm(func=mdp.robot_joint_torque)    # 关节力矩 / Joint torques
-        robot_joint_acc = ObsTerm(func=mdp.robot_joint_acc)          # 关节加速度 / Joint accelerations
-        robot_feet_contact_force = ObsTerm(                          # 足部接触力 / Foot contact forces
-            func=mdp.robot_feet_contact_force,
-            params={
-                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*foot_[LR]_Link"),
-            },
-        )
-        robot_mass = ObsTerm(func=mdp.robot_mass)                    # 机器人质量 / Robot mass
-        robot_inertia = ObsTerm(func=mdp.robot_inertia)              # 机器人惯量 / Robot inertia
-        robot_joint_stiffness = ObsTerm(func=mdp.robot_joint_stiffness)  # 关节刚度 / Joint stiffness
-        robot_joint_damping = ObsTerm(func=mdp.robot_joint_damping)      # 关节阻尼 / Joint damping
-        robot_pos = ObsTerm(func=mdp.robot_pos)                      # 机器人位置 / Robot position
-        robot_vel = ObsTerm(func=mdp.robot_vel)                      # 机器人速度 / Robot velocity
-        robot_material_propertirs = ObsTerm(func=mdp.robot_material_properties)  # 材质属性 / Material properties
-        robot_base_pose = ObsTerm(func=mdp.robot_base_pose)          # 基座姿态 / Base pose
-
-        def __post_init__(self):
-            self.enable_corruption = False     # 不对特权信息添加噪声 / No noise for privileged information
-            self.concatenate_terms = True      # 连接所有观测项 / Concatenate all terms
-
-    @configclass
-    class CommandsObsCfg(ObsGroup):
-        """命令观测配置 / Commands observation configuration"""
-        velocity_commands = ObsTerm(
-            func=mdp.generated_commands, 
-            params={"command_name": "base_velocity"}  # 速度命令 / Velocity commands
-        )
-
-    policy: PolicyCfg = PolicyCfg()
-    critic: CriticCfg = CriticCfg()
-    commands: CommandsObsCfg = CommandsObsCfg()
-    obsHistory: HistoryObsCfg = HistoryObsCfg()
+    # PIM:
+    critic: PIMCriticCfg = PIMCriticCfg()
+    policy: PIMHistoryObsCfg = PIMHistoryObsCfg()
+    perceptive: PIMHeightScanObsCfg = PIMHeightScanObsCfg()
 
 
 @configclass
@@ -546,7 +441,7 @@ class CurriculumCfg:
 
 
 @configclass
-class PFEnvCfg(ManagerBasedRLEnvCfg):
+class PFPIMBasedEnvCfg(ManagerBasedRLEnvCfg):
     """测试环境配置类 / Test environment configuration class"""
 
     # 场景设置 / Scene settings
@@ -577,3 +472,43 @@ class PFEnvCfg(ManagerBasedRLEnvCfg):
             self.scene.height_scanner.update_period = self.decimation * self.sim.dt
         if self.scene.contact_forces is not None:
             self.scene.contact_forces.update_period = self.sim.dt
+        
+        self.scene.robot = POINTFOOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot.init_state.joint_pos = {
+            "abad_L_Joint": 0.0,
+            "abad_R_Joint": 0.0,
+            "hip_L_Joint": 0.0,
+            "hip_R_Joint": 0.0,
+            "knee_L_Joint": 0.0,
+            "knee_R_Joint": 0.0,
+        }
+        # 调整基座质量随机化参数 / Adjust base mass randomization parameters
+        self.events.add_base_mass.params["asset_cfg"].body_names = "base_Link"
+        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 2.0)
+
+        # 设置基座接触终止条件 / Set base contact termination condition
+        self.terminations.base_contact.params["sensor_cfg"].body_names = "base_Link"
+        
+        # 更新视口相机设置 / Update viewport camera settings
+        self.viewer.origin_type = "env"  # 相机跟随环境 / Camera follows environment
+
+
+@configclass
+class PFPIMBaseEnvCfg_PLAY(PFPIMBasedEnvCfg):
+    """双足机器人基础测试环境配置 - 用于策略评估 / Base play environment configuration - for policy evaluation"""
+    def __post_init__(self):
+        super().__post_init__()
+
+        # make a smaller scene for play
+        self.scene.num_envs = 32
+        
+        self.episode_length_s = 100.0
+
+        # disable randomization for play
+        self.observations.policy.enable_corruption = True
+        # remove random pushing event
+        self.events.push_robot = None
+        # remove random base mass addition event
+        self.events.add_base_mass = None
+        
+        self.curriculum.lin_vel_cmd_levels=None
