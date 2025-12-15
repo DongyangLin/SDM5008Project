@@ -29,3 +29,4 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 from .utils import split_and_pad_trajectories, unpad_trajectories
+from .symmetry_loss import G_o_n, G_o_p, G_a, compute_symmetry_loss

@@ -34,6 +34,7 @@ import torch.optim as optim
 
 from rsl_rl.modules import PIMActorCritic
 from rsl_rl.storage import PIMRolloutStorage
+from rsl_rl.utils.symmetry_loss import compute_symmetry_loss
 
 class PIMPPO:
     actor_critic: PIMActorCritic
@@ -45,6 +46,8 @@ class PIMPPO:
                  gamma=0.998,
                  lam=0.95,
                  value_loss_coef=1.0,
+                 policy_sym_coef=1.0,
+                 value_sym_coef=1.0,
                  entropy_coef=0.0,
                  learning_rate=1e-3,
                  max_grad_norm=1.0,
@@ -75,6 +78,8 @@ class PIMPPO:
         self.num_learning_epochs = num_learning_epochs
         self.num_mini_batches = num_mini_batches
         self.value_loss_coef = value_loss_coef
+        self.policy_sym_coef = policy_sym_coef
+        self.value_sym_coef = value_sym_coef
         self.entropy_coef = entropy_coef
         self.gamma = gamma
         self.lam = lam
@@ -119,6 +124,9 @@ class PIMPPO:
     def compute_returns(self, last_critic_obs, last_perceptive_obs):
         last_values= self.actor_critic.evaluate(last_critic_obs, last_perceptive_obs).detach()
         self.storage.compute_returns(last_values, self.gamma, self.lam)
+    
+    def compute_symmetry_loss(self, obs_batch, perceptive_obs_batch, critic_obs_batch):
+        return compute_symmetry_loss(self.actor_critic, obs_batch, perceptive_obs_batch, critic_obs_batch, self.policy_sym_coef, self.value_sym_coef)
 
     def update(self):
         mean_value_loss = 0
@@ -173,7 +181,10 @@ class PIMPPO:
                 else:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+                # Symmetry loss
+                symmetry_loss = self.compute_symmetry_loss(obs_batch, perceptive_obs_batch, critic_obs_batch, actions_batch)
+
+                loss = surrogate_loss + symmetry_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
 
                 # Gradient step
                 self.optimizer.zero_grad()

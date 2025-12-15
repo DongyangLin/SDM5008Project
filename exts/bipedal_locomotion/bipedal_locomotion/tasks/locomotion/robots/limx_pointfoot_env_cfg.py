@@ -404,7 +404,7 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         # HIM does not use these specific regularization terms
         self.rewards.pen_feet_regulation = None
         self.rewards.foot_landing_vel = None
-        # self.rewards.test_gait_reward = None
+        self.rewards.test_gait_reward = 0.4
         # self.rewards.pen_feet_distance = None # Not in Table 5
         self.rewards.pen_feet_distance.weight=-50.0
         self.rewards.pen_undesired_contacts = None # Not in Table 5 (though often kept for safety, strictly HIM doesn't list it)
@@ -471,7 +471,7 @@ class PFPIMEnvCfg(PFPIMBaseEnvCfg):
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = None
-        self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
+        self.observations.perceptive.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
                       "offset":0.78}, 
             clip = (-2.0, 2.0),
