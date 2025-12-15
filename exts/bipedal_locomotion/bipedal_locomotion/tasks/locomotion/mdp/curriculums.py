@@ -75,7 +75,7 @@ def lin_vel_cmd_levels(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
     reward_term_name: str = "rew_lin_vel_xy",
-    delta_vel: float = 0.2
+    delta_vel: float = 0.1
 ) -> torch.Tensor:
     command_term = env.command_manager.get_term("base_velocity")
     ranges = command_term.cfg.ranges
@@ -85,7 +85,7 @@ def lin_vel_cmd_levels(
     reward = torch.mean(env.reward_manager._episode_sums[reward_term_name][env_ids]) / env.max_episode_length_s
 
     if env.common_step_counter % env.max_episode_length == 0:
-        if reward > reward_term.weight * 0.8:
+        if reward > reward_term.weight * 0.70:
             delta_command = torch.tensor([-delta_vel, delta_vel], device=env.device)
             ranges.lin_vel_x = torch.clamp(
                 torch.tensor(ranges.lin_vel_x, device=env.device) + delta_command,

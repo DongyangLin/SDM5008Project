@@ -11,8 +11,40 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as GaussianNoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as UniformNoise
 from bipedal_locomotion.assets.config.pointfoot_cfg import POINTFOOT_CFG
-from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFSceneCfg, CommandCfg, ActionsCfg, EventsCfg, TerminationsCfg
+from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFSceneCfg, ActionsCfg, EventsCfg, TerminationsCfg
 from bipedal_locomotion.tasks.locomotion import mdp
+
+@configclass
+class CommandCfg:
+    # 步态命令配置 / Gait command configuration
+    # 步态命令配置 / Gait command configuration
+    gait_command = mdp.UniformGaitCommandCfg(
+        resampling_time_range=(5.0, 5.0),  # 命令重采样时间范围 (固定5秒) / Command resampling time range (fixed 5s)
+        debug_vis=False,                    # 不显示调试可视化 / No debug visualization
+        ranges=mdp.UniformGaitCommandCfg.Ranges(
+            frequencies=(1.5, 2.5),     # 步态频率范围 [Hz] / Gait frequency range [Hz]
+            offsets=(0.5, 0.5),         # 相位偏移范围 [0-1] / Phase offset range [0-1]
+            durations=(0.5, 0.5),       # 接触持续时间范围 [0-1] / Contact duration range [0-1]
+            # swing_height=(0.1, 0.2)     # 摆动高度范围 [m] / Swing height range [m]
+        ),
+    )
+    
+    base_velocity = mdp.UniformLevelVelocityCommandCfg(
+        asset_name="robot",
+        resampling_time_range=(0.0, 5.0),
+        rel_standing_envs=0.2,
+        rel_heading_envs=1.0,
+        heading_command=False,
+        # heading_control_stiffness = 1.0,
+        debug_vis=False,
+        ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-0.5, 0.5)
+        ),
+        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+            lin_vel_x=(-1.5, 1.5), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-0.5, 0.5)
+            # lin_vel_x=(0.7, 0.7), lin_vel_y=(0.0,0.0), ang_vel_z=(0.0,0.0)
+        ),
+    )
 
 ##############
 # MDP设置 / MDP Settings
@@ -98,6 +130,7 @@ class ObservarionsCfg:
         last_action = ObsTerm(func=mdp.last_action)
         gait_phase = ObsTerm(func=mdp.get_gait_phase)
         gait_command = ObsTerm(func=mdp.get_gait_command, params={"command_name": "gait_command"})
+        
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True
@@ -121,16 +154,16 @@ class RewardsCfg:
 
     # tracking related rewards
     rew_lin_vel_xy = RewTerm(
-        func=mdp.track_lin_vel_xy_exp, weight=3.0, params={"command_name": "base_velocity", "std": math.sqrt(0.2)}
+        func=mdp.track_lin_vel_xy_exp, weight=2.5, params={"command_name": "base_velocity", "std": math.sqrt(0.2)}
     )
     rew_ang_vel_z = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=1.5, params={"command_name": "base_velocity", "std": math.sqrt(0.2)}
+        func=mdp.track_ang_vel_z_exp, weight=1.0, params={"command_name": "base_velocity", "std": math.sqrt(0.2)}
     )
 
     # 调节相关奖励 / Regulation-related rewards
     pen_base_height = RewTerm(
         func=mdp.base_com_height,                   # 基座高度惩罚 / Base height penalty
-        params={"target_height": 0.78},            # 目标高度 78cm / Target height 78cm
+        params={"target_height": 0.65, "sensor_cfg": SceneEntityCfg("height_scanner")},            # 目标高度 65cm / Target height 78cm
         weight=-20.0,                               # 负权重表示惩罚 / Negative weight indicates penalty
     )
     
@@ -164,9 +197,9 @@ class RewardsCfg:
     )
     pen_feet_distance = RewTerm(
         func=mdp.feet_distance,                     # 足部距离惩罚 / Foot distance penalty
-        weight=-10,
+        weight=-100,
         params={
-            "min_feet_distance": 0.12,            # 最小足部距离 / Minimum foot distance
+            "min_feet_distance": 0.18,            # 最小足部距离 / Minimum foot distance
             "feet_links_name": ["foot_[RL]_Link"]  # 足部连杆名称 / Foot link names
         }
     )
@@ -177,7 +210,8 @@ class RewardsCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["foot_[RL]_Link"]),
             "base_height_target": 0.65,            # 基座目标高度 / Base target height
-            "foot_radius": 0.03                    # 足部半径 / Foot radius
+            "foot_radius": 0.03,                    # 足部半径 / Foot radius
+            "sensor_cfg": SceneEntityCfg("height_scanner"),
         },
     )
 
@@ -188,7 +222,8 @@ class RewardsCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names=["foot_[RL]_Link"]),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["foot_[RL]_Link"]),
             "foot_radius": 0.03,
-            "about_landing_threshold": 0.08         # 即将着陆阈值 / About to land threshold
+            "about_landing_threshold": 0.08,         # 即将着陆阈值 / About to land threshold
+            "height_scan_cfg": SceneEntityCfg("height_scanner"),
         },
     )
     
@@ -207,6 +242,19 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names="foot_.*"),
             "asset_cfg": SceneEntityCfg("robot", body_names="foot_.*"),
         },
+    )
+    
+    rew_feet_clearance = RewTerm(
+        func=mdp.foot_clearance_reward, 
+        weight=0.5, 
+        params={
+            "std": 0.05,
+            "tanh_mult": 2.0,
+            "target_height": [0.10, 0.20], # p_z_target approx
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*foot_[LR]_Link"), # Regex for feet
+            "sensor_cfg": SceneEntityCfg("height_scanner"),
+            "foot_radius": 0.03,
+        }
     )
 
 

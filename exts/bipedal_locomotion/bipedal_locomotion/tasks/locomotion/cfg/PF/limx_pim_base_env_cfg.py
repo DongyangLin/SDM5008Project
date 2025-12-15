@@ -494,7 +494,7 @@ class PFPIMBaseEnvCfg(ManagerBasedRLEnvCfg):
 
 
 @configclass
-class PFPIMBaseEnvCfg_PLAY(PFPIMBasedEnvCfg):
+class PFPIMBaseEnvCfg_PLAY(PFPIMBaseEnvCfg):
     """双足机器人基础测试环境配置 - 用于策略评估 / Base play environment configuration - for policy evaluation"""
     def __post_init__(self):
         super().__post_init__()

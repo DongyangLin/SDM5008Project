@@ -216,19 +216,19 @@ class PFStairEnvCfgv1(PFBaseEnvCfg):
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
             attach_yaw_only=True,
             offset = OffsetCfg(pos=(0, 0, 20.0)),
-            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 0.5]), #TODO: adjust size to fit real robot
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 0.6]), #TODO: adjust size to fit real robot
             debug_vis=False,
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, # the defualt height of robot is 0.78m
+                      "offset":0.68}, # the defualt height of robot is 0.78m
                     noise=GaussianNoise(mean=0.0, std=0.01),
                     clip = (-2.0, 2.0),
         )
         self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, # the defualt height of robot is 0.78m
+                      "offset":0.68}, # the defualt height of robot is 0.78m
             clip = (-2.0, 2.0),
         )
         
@@ -238,8 +238,8 @@ class PFStairEnvCfgv1(PFBaseEnvCfg):
         self.commands.base_velocity.ranges.ang_vel_z = (-math.pi / 6, math.pi / 6) 
         
         self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner") # add height scanner to fit stairs height
-        
-        self.rewards.pen_lin_vel_z.weight = -0.1 # allow the robot to climb up and down
+        self.rewards.pen_feet_regulation.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
+        self.rewards.foot_landing_vel.params["height_scan_cfg"] = SceneEntityCfg("height_scanner")
         
         self.rewards.pen_feet_distance.weight = -100.0
         
@@ -247,6 +247,8 @@ class PFStairEnvCfgv1(PFBaseEnvCfg):
 
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.terrain_generator = STAIRS_TERRAINS_CFG
+        
+        self.commands.base_velocity.debug_vis=False
 
 
 @configclass
@@ -283,7 +285,7 @@ class PFStairEnvCfgv1_PLAY(PFBaseEnvCfg_PLAY):
         # spawn the robot randomly in the grid (instead of their terrain levels)
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.max_init_terrain_level = None
-        self.scene.terrain.terrain_generator = STAIRS_TERRAINS_PLAY_CFG.replace(difficulty_range=(0.5, 0.5))
+        self.scene.terrain.terrain_generator = STAIRS_TERRAINS_PLAY_CFG
         
 
 ##############################
@@ -304,14 +306,14 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
             attach_yaw_only=True,
             offset = OffsetCfg(pos=(0, 0, 20.0)),
-            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 1.0]), 
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 0.6]), 
             debug_vis=False,
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = None
         self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.68}, 
+                      "offset":0.65}, 
             clip = (-2.0, 2.0),
         )
         
@@ -320,14 +322,17 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         self.commands.base_velocity.limit_ranges.lin_vel_x = (-0.2, 1.0)      
         self.commands.base_velocity.limit_ranges.lin_vel_y = (-0.2, 0.2)     
         self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
-        self.commands.base_velocity.ranges.lin_vel_x=(-0.5, 0.5) # higher vel at beginning
         # self.commands.gait_command = None
         
-        self.curriculum.terrain_levels.func = mdp.terrain_levels_vel_constrained
+        # Close Vel Curriculum
+        self.curriculum.lin_vel_cmd_levels = None
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 1.0)      
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)     
+        self.commands.base_velocity.ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
 
-        # =========================================================================
-        # REWARD MODIFICATIONS (Strictly following HIM Table 5)
-        # =========================================================================
+        # # =========================================================================
+        # # REWARD MODIFICATIONS (Strictly following HIM Table 5)
+        # # =========================================================================
 
         # 1. Linear velocity tracking 
         # Eq: exp(-|v_cmd - v_xy|^2 / sigma)
@@ -374,19 +379,12 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         # Ensure target matches your robot. 
         # Using height scanner to compute height relative to terrain.
         self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
-        self.rewards.pen_base_height.params["target_height"] = 0.68
+        self.rewards.pen_base_height.params["target_height"] = 0.65
 
         # 9. Foot clearance 
         # Eq: sum((p_z_target - p_z)^2 * v_xy)
         # Weight: -0.01
-        self.rewards.pen_feet_clearance = RewTerm(
-            func=mdp.feet_clearance_him, 
-            weight=-0.01, 
-            params={
-                "target_height": 0.15, # p_z_target approx
-                "asset_cfg": SceneEntityCfg("robot", body_names=".*foot_[LR]_Link") # Regex for feet
-            }
-        )
+        self.rewards.rew_feet_clearance.weight=0.5
 
         # 10. Action rate 
         # Eq: |a_t - a_{t-1}|^2
@@ -404,9 +402,8 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         # HIM does not use these specific regularization terms
         self.rewards.pen_feet_regulation = None
         self.rewards.foot_landing_vel = None
-        # self.rewards.test_gait_reward = None
-        # self.rewards.pen_feet_distance = None # Not in Table 5
-        self.rewards.pen_feet_distance.weight=-50.0
+        self.rewards.test_gait_reward.weight = 0.4
+        self.rewards.pen_feet_distance.weight = -40.0 # Not in Table 5
         self.rewards.pen_undesired_contacts = None # Not in Table 5 (though often kept for safety, strictly HIM doesn't list it)
         self.rewards.pen_joint_pos_limits = None # Not in Table 5
         self.rewards.pen_joint_vel_l2 = None # Not in Table 5 (covered by power/smoothness)
@@ -425,14 +422,14 @@ class PFHIMPlayEnvCfg(PFHIMBaseEnvCfg_PLAY):
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
             attach_yaw_only=True,
             offset = OffsetCfg(pos=(0, 0, 20.0)),
-            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 1.0]), #TODO: adjust size to fit real robot
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.0, 0.6]), #TODO: adjust size to fit real robot
             debug_vis=False,
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = None
         self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, # the defualt height of robot is 0.78m
+                      "offset":0.65}, # the defualt height of robot is 0.78m
             clip = (-2.0, 2.0),
         )
         

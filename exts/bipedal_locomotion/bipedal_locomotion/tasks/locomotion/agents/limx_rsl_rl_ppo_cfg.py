@@ -86,7 +86,7 @@ class PF_TRON1AFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class PF_TRON1AStairPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 6000         # longer iter, for stair terrains
+    max_iterations = 20000         # longer iter, for stair terrains
     save_interval = 200           # 更频繁的保存 / More frequent saving
     experiment_name = "pf_tron_1a_flat"
     empirical_normalization = False   # False ！！！！！！！！！！！！！

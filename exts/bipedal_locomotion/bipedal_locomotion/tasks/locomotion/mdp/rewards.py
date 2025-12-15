@@ -32,6 +32,7 @@ def foot_landing_vel(
         sensor_cfg: SceneEntityCfg,
         foot_radius: float,
         about_landing_threshold: float,
+        height_scan_cfg:SceneEntityCfg | None = None,
 ) -> torch.Tensor:
     """惩罚高足部着陆速度 - 鼓励轻柔着陆 / Penalize high foot landing velocities - encourages soft landing"""
     asset = env.scene[asset_cfg.name]
@@ -42,10 +43,18 @@ def foot_landing_vel(
     
     # 检测接触状态 / Detect contact state
     contacts = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, 2] > 0.1
+    
+    if height_scan_cfg is not None:
+        sensor: RayCaster = env.scene[height_scan_cfg.name]
+        # Adjust the target height using the sensor data
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]-torch.mean(sensor.data.ray_hits_w[..., 2], dim=1).unsqueeze(1)
+    else:
+        # Use the provided target height directly for flat terrain
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
 
     # 计算足部高度（相对于地面）/ Calculate foot height (relative to ground)
     foot_heights = torch.clip(
-        asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - foot_radius, 0, 1
+        adjusted_height - foot_radius, 0, 1
     )  # TODO: 改为相对于地形垂直投影的高度 / TODO: change to height relative to terrain vertical projection
 
     # 检测即将着陆状态：低高度 + 无接触 + 下降速度 / Detect about-to-land state: low height + no contact + downward velocity
@@ -246,13 +255,22 @@ def feet_regulation(env: ManagerBasedRLEnv,
     asset_cfg: SceneEntityCfg,
     foot_radius: float,
     base_height_target: float,
+    sensor_cfg: SceneEntityCfg | None = None,
 ) -> torch.Tensor:
     """足部调节奖励 - 惩罚足部不当运动 / Foot regulation reward - penalizes improper foot movement"""
     asset: RigidObject = env.scene[asset_cfg.name]
     
+    if sensor_cfg is not None:
+        sensor: RayCaster = env.scene[sensor_cfg.name]
+        # Adjust the target height using the sensor data
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]-torch.mean(sensor.data.ray_hits_w[..., 2], dim=1).unsqueeze(1)
+    else:
+        # Use the provided target height directly for flat terrain
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
+    
     # 计算足部高度 / Calculate foot height
     feet_height = torch.clip(
-        asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - foot_radius, 0, 1
+        adjusted_height - foot_radius, 0, 1
     )  # TODO: 改为相对于地形垂直投影的高度 / TODO: change to height relative to terrain vertical projection
     
     # 获取足部XY方向速度 / Get foot XY-direction velocities
@@ -265,6 +283,30 @@ def feet_regulation(env: ManagerBasedRLEnv,
     reward = torch.sum(height_scale * torch.square(torch.norm(feet_vel_xy, dim=-1)), dim=1)
     return reward
 
+def foot_clearance_reward(
+    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: tuple[float, float], std: float, tanh_mult: float, foot_radius:float,
+    sensor_cfg: SceneEntityCfg | None = None,
+) -> torch.Tensor:
+    """Reward the swinging feet for clearing a specified height off the ground"""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    min_h, max_h = target_height
+    if sensor_cfg is not None:
+        sensor: RayCaster = env.scene[sensor_cfg.name]
+        # Adjust the target height using the sensor data
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]-torch.mean(sensor.data.ray_hits_w[..., 2], dim=1).unsqueeze(1)
+    else:
+        # Use the provided target height directly for flat terrain
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
+    # 计算足部高度 / Calculate foot height
+    feet_height = torch.clip(
+        adjusted_height - foot_radius, 0, 1
+    )
+    clamped_z = torch.clamp(feet_height, min=min_h, max=max_h)
+    z_error = feet_height - clamped_z
+    foot_z_target_error = torch.square(z_error)
+    foot_velocity_tanh = torch.tanh(tanh_mult * torch.norm(asset.data.body_lin_vel_w[:, asset_cfg.body_ids, :2], dim=2))
+    reward = foot_z_target_error * foot_velocity_tanh
+    return torch.exp(-torch.sum(reward, dim=1) / std)
 
 def base_height_rough_l2(
     env: ManagerBasedRLEnv,
@@ -310,70 +352,6 @@ def base_com_height(
         adjusted_target_height = target_height
     # Compute the L2 squared penalty
     return torch.abs(asset.data.root_pos_w[:, 2] - adjusted_target_height)
-
-def feet_clearance_him(
-    env, 
-    asset_cfg: SceneEntityCfg, 
-    target_height: float
-) -> torch.Tensor:
-    """
-    HIM论文中的足部离地高度奖励 (Foot Clearance Reward).
-    
-    公式: sum((target_height - foot_z_robot_frame)^2 * foot_vel_xy_robot_frame)
-    """
-    # 1. 获取资产 (Robot)
-    asset = env.scene[asset_cfg.name]
-    
-    # 2. 获取足部和基座的 World Frame 状态
-    # body_pos_w: (num_envs, num_bodies, 3)
-    feet_pos_w = asset.data.body_pos_w[:, asset_cfg.body_ids]
-    
-    # [修复点] 使用 body_lin_vel_w (3D) 而不是 body_vel_w (6D)
-    # 之前的 body_vel_w 包含角速度，导致 view(-1, 3) 时维度翻倍
-    feet_vel_w = asset.data.body_lin_vel_w[:, asset_cfg.body_ids]
-    
-    root_pos_w = asset.data.root_pos_w
-    root_quat_w = asset.data.root_quat_w
-    
-    num_envs = env.num_envs
-    num_feet = feet_pos_w.shape[1]
-    
-    # 3. 将足部位置转换到 Robot Base Frame
-    # 计算相对位置: P_foot_w - P_base_w
-    rel_pos_w = feet_pos_w - root_pos_w.unsqueeze(1)  # (N, 4, 3)
-    
-    # 准备旋转：将 Quaternion 扩展以匹配足部数量
-    # (N, 4) -> (N*4, 4)
-    flat_root_quat = root_quat_w.repeat_interleave(num_feet, dim=0)
-    # (N, 4, 3) -> (N*4, 3)
-    flat_rel_pos_w = rel_pos_w.view(-1, 3)
-    
-    # 执行逆旋转 (World -> Base)
-    flat_rel_pos_b = quat_rotate_inverse(flat_root_quat, flat_rel_pos_w)
-    
-    # 还原形状 (N, 4, 3) 并提取 Z 轴高度
-    feet_pos_b = flat_rel_pos_b.view(num_envs, num_feet, 3)
-    feet_z_b = feet_pos_b[:, :, 2] # p_z^i
-    
-    # 4. 将足部速度转换到 Robot Base Frame 并计算 XY 模长
-    # 现在的 feet_vel_w 是 (N, 4, 3)，view(-1, 3) 后是 (N*4, 3)，与 flat_root_quat 匹配
-    flat_feet_vel_w = feet_vel_w.view(-1, 3)
-    flat_feet_vel_b = quat_rotate_inverse(flat_root_quat, flat_feet_vel_w)
-    feet_vel_b = flat_feet_vel_b.view(num_envs, num_feet, 3)
-    
-    # 计算 XY 平面速度模长: sqrt(vx^2 + vy^2)
-    feet_vel_xy = torch.norm(feet_vel_b[:, :, :2], dim=-1) # v_xy^i
-    
-    # 5. 计算误差项
-    # error = (target - current_z)^2
-    height_error = (target_height - feet_z_b).square()
-    
-    # 6. 最终计算
-    # sum( error * velocity_weight )
-    reward = torch.sum(height_error * feet_vel_xy, dim=1)
-    
-    return reward
-
 
 
 class GaitReward(ManagerTermBase):
