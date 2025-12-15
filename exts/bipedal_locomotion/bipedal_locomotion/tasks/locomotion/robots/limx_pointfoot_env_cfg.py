@@ -468,7 +468,7 @@ class PFPIMEnvCfg(PFPIMBaseEnvCfg):
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = None
-        self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
+        self.observations.perceptive.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
                       "offset":0.78}, 
             clip = (-2.0, 2.0),

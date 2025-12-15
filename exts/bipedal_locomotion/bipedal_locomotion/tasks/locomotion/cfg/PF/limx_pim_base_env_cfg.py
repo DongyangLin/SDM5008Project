@@ -170,7 +170,7 @@ class ObservarionsCfg:
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True
-            self.history_length = 5  # 必须与 algorithm.obs_history_len 一致
+            self.history_length = 1
             self.flatten_history_dim = False
 
     # PIM:

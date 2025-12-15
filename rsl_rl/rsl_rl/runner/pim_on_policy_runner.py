@@ -57,7 +57,7 @@ class PIMOnPolicyRunner:
         
         # 观测信息
         obs, extras = self.env.get_observations()   # obs: (batch_size, history_length, dim_nonperceptive_obs)
-        perceptive_obs = extras["observations"]["perceptive"]   # perceptive_obs: (batch_size, dim_perceptive_obs) ?????????????????????????????????????????????
+        perceptive_obs = extras["observations"]["perceptive"]   # perceptive_obs: (batch_size, dim_perceptive_obs)
         self.history_length = obs.shape[1]   # H = 5
         self.dim_nonperceptive_obs = obs.shape[2]   # dim(o^n_t) = 45
         self.dim_perceptive_obs = perceptive_obs.shape[1]   # dim(o^p_t) = 96
@@ -98,7 +98,7 @@ class PIMOnPolicyRunner:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf, high=int(self.env.max_episode_length))
         obs, extras = self.env.get_observations()
         flattened_obs = obs.flatten(start_dim=1) 
-        perceptive_obs = extras["observations"]["perceptive"]   # perceptive_obs: (batch_size, dim_perceptive_obs) ?????????????????????????????????????????????
+        perceptive_obs = extras["observations"]["perceptive"]   # perceptive_obs: (batch_size, dim_perceptive_obs)
         critic_obs = extras["observations"]["critic"]
 
         self.alg.actor_critic.train()   # switch to train mode (for dropout for example)
@@ -120,7 +120,7 @@ class PIMOnPolicyRunner:
                     (obs, rewards, dones, infos) = self.env.step(actions)
                     
                     flattened_obs = obs.flatten(start_dim=1)
-                    perceptive_obs = infos["observations"]["perceptive"]  # perceptive_obs: (batch_size, dim_perceptive_obs) ?????????????????????????????????????????????
+                    perceptive_obs = infos["observations"]["perceptive"]  # perceptive_obs: (batch_size, dim_perceptive_obs)
                     critic_obs = infos["observations"]["critic"]
                     flattened_obs, perceptive_obs, critic_obs, rewards, dones = flattened_obs.to(self.device), perceptive_obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
                     next_critic_obs = critic_obs.clone().detach()
