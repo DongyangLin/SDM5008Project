@@ -163,7 +163,7 @@ class RewardsCfg:
     # 调节相关奖励 / Regulation-related rewards
     pen_base_height = RewTerm(
         func=mdp.base_com_height,                   # 基座高度惩罚 / Base height penalty
-        params={"target_height": 0.65, "sensor_cfg": SceneEntityCfg("height_scanner")},            # 目标高度 65cm / Target height 78cm
+        params={"target_height": 0.68, "sensor_cfg": SceneEntityCfg("height_scanner")},            # 目标高度 65cm / Target height 78cm
         weight=-20.0,                               # 负权重表示惩罚 / Negative weight indicates penalty
     )
     
@@ -209,7 +209,7 @@ class RewardsCfg:
         weight=-0.1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["foot_[RL]_Link"]),
-            "base_height_target": 0.65,            # 基座目标高度 / Base target height
+            "base_height_target": 0.68,            # 基座目标高度 / Base target height
             "foot_radius": 0.03,                    # 足部半径 / Foot radius
             "sensor_cfg": SceneEntityCfg("height_scanner"),
         },

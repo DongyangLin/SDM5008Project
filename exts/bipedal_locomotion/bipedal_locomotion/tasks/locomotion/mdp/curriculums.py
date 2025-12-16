@@ -130,7 +130,7 @@ def terrain_levels_vel_constrained(
         
         # [修改] 个体判定标准：每个机器人自己跟自己比
         # 生成形状相同的布尔 Tensor
-        tracking_pass = per_env_reward > (reward_term.weight * 0.8)
+        tracking_pass = per_env_reward > (reward_term.weight * 0.70)
         
         # [修改] 组合条件：逐元素逻辑与 (Element-wise AND)
         # 只有距离够远(&)且跟踪够好(&)的那个机器人，它的 move_up 才为 True
