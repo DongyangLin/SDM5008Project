@@ -317,7 +317,9 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         # ... (Terrain, Height Scanner, Observations, Commands setup remains the same) ...
         # 1. 地形与课程设置
         self.scene.terrain.terrain_type = "generator"
-        self.scene.terrain.terrain_generator = STAIRS_TERRAINS_CFG
+        self.scene.terrain.terrain_generator = HIM_TERRAINS_CFG
+        self.scene.terrain.max_init_terrain_level= self.scene.terrain.terrain_generator.num_rows-1
+        # self.curriculum.terrain_levels=None # For Phase 3
 
         self.scene.height_scanner = RayCasterCfg(
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
@@ -338,14 +340,15 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         
         self.commands.base_velocity.limit_ranges.lin_vel_x = (-0.2, 1.0)      
         self.commands.base_velocity.limit_ranges.lin_vel_y = (-0.2, 0.2)     
-        self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
-        # self.commands.gait_command = None
+        self.commands.base_velocity.limit_ranges.ang_vel_z = (-0.1, 0.1) # For Phase 2
+        # self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6) # Phase 1 and 3
         
         # Close Vel Curriculum
-        # self.curriculum.lin_vel_cmd_levels = None
-        # self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 1.0)      
+        # self.curriculum.lin_vel_cmd_levels = None # For Phase 3
+        # self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 1.0) # For Phase 3      
         # self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)     
-        # self.commands.base_velocity.ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
+        # self.commands.base_velocity.ranges.ang_vel_z = (-math.pi / 6, math.pi / 6) # Phase 3
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.1, 0.1) # For Phase 2
 
         # # =========================================================================
         # # REWARD MODIFICATIONS (Strictly following HIM Table 5)
@@ -354,7 +357,8 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         # 1. Linear velocity tracking 
         # Eq: exp(-|v_cmd - v_xy|^2 / sigma)
         # Weight: 1.0
-        self.rewards.rew_lin_vel_xy.weight = 1.0
+        # self.rewards.rew_lin_vel_xy.weight = 1.0 # For Phase 1
+        self.rewards.rew_lin_vel_xy.weight = 1.25 # For Phase 2
         self.rewards.rew_lin_vel_xy.params["std"] = 0.25 # sigma = 0.25
 
         # 2. Angular velocity tracking 
@@ -376,7 +380,7 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         # 5. Orientation 
         # Eq: |g_proj|^2 (approx via flat_orientation_l2)
         # Weight: -0.2
-        self.rewards.pen_flat_orientation.weight = -1.0
+        self.rewards.pen_flat_orientation.weight = -2.0 # Stable Phase 1 !!!
 
         # 6. Joint accelerations 
         # Eq: |theta_ddot|^2
@@ -413,8 +417,9 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         self.rewards.pen_action_smoothness.weight = -0.01
         
         # For bipedal robot
-        self.rewards.test_gait_reward.weight = 0.4 # Stable gait penalty !!!
+        self.rewards.test_gait_reward.weight = 0.5 # Stable gait penalty !!!
         self.rewards.pen_feet_distance.weight = -40.0 # Stable feet_distance penalty !!!
+        self.rewards.keep_balance.weight = 0.3 # For Phase 2, Phase 1 keep 1.0
 
         # =========================================================================
         # REMOVE NON-HIM REWARDS
@@ -452,7 +457,7 @@ class PFHIMPlayEnvCfg(PFHIMBaseEnvCfg_PLAY):
         
         self.scene.height_scanner.update_period = self.decimation * self.sim.dt
         
-        self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.5)      
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 1.0)      
         self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)     
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
         self.commands.base_velocity.debug_vis = True

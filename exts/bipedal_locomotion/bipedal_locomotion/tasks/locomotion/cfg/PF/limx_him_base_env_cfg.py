@@ -6,13 +6,148 @@ from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as GaussianNoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as UniformNoise
 from bipedal_locomotion.assets.config.pointfoot_cfg import POINTFOOT_CFG
-from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFSceneCfg, ActionsCfg, EventsCfg, TerminationsCfg
+from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFSceneCfg, ActionsCfg, TerminationsCfg
 from bipedal_locomotion.tasks.locomotion import mdp
+
+@configclass
+class EventsCfg:
+    """调整后的中等难度随机化配置 / Medium difficulty randomization events"""
+
+    # ==========================================================
+    # 1. 启动时随机化 (Startup) - 塑造鲁棒性
+    # ==========================================================
+    
+    add_base_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
+            # 调整: 从 (-1.0, 3.0) 降为 (-1.0, 1.5)
+            # 给 10-20kg 的机器人加 1.5kg 负载是合理的挑战
+            "mass_distribution_params": (-1.0, 1.5), 
+            "operation": "add",
+        },
+    )
+
+    add_link_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_[LR]_Link"),
+            # 调整: 保持窄范围，(0.9, 1.1) 是标准的中等难度
+            "mass_distribution_params": (0.9, 1.1),
+            "operation": "scale",
+        },
+    )
+    
+    radomize_rigid_body_mass_inertia = EventTerm(
+        func=mdp.randomize_rigid_body_mass_inertia,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot"),
+            # 调整: 稍微收窄到 (0.9, 1.1)，避免惯量过大导致控制发散
+            "mass_inertia_distribution_params": (0.9, 1.1),
+            "operation": "scale",
+        },
+    )
+    
+    robot_physics_material = EventTerm(
+        func=mdp.randomize_rigid_body_material,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+            # 调整: 避免过低的摩擦力 (0.4有点像冰面)，提升下限到 0.5
+            "static_friction_range": (0.5, 1.25), 
+            "dynamic_friction_range": (0.6, 1.0),
+            # 关键调整: 恢复系数必须很低！1.0 是弹力球，机器人会飞。
+            # 0.0 (无弹性) - 0.3 (微弱弹性) 是合理的物理范围
+            "restitution_range": (0.0, 0.3),
+            "num_buckets": 64,
+        },
+    )
+
+    robot_joint_stiffness_and_damping = EventTerm(
+        func=mdp.randomize_actuator_gains,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            # 调整: 稍微收窄范围，避免电机特性差异过大
+            # 假设你的名义刚度在 40 左右
+            "stiffness_distribution_params": (35.0, 45.0), 
+            "damping_distribution_params": (2.2, 2.8),
+            "operation": "abs", 
+            "distribution": "uniform",
+        },
+    )
+
+    robot_center_of_mass = EventTerm(
+        func=mdp.randomize_rigid_body_coms,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot"),
+            # 关键调整: 从 7.5cm 降为 2cm
+            # 2cm 的偏移对于双足机器人已经很难了，但物理上还有解
+            "com_distribution_params": ((-0.05, 0.05), (-0.02, 0.02), (-0.02, 0.02)),
+            "operation": "add",
+            "distribution": "uniform",
+        },
+    )
+
+    # ==========================================================
+    # 2. 重置时随机化 (Reset) - 增加初始状态多样性
+    # ==========================================================
+    
+    reset_robot_base = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            # 调整: 初始速度从 0.5 降为 0.25
+            # 给一个轻微的初速度，而不是把机器人扔出去
+            "velocity_range": {
+                "x": (-0.25, 0.25), "y": (-0.25, 0.25), "z": (-0.25, 0.25),
+                "roll": (-0.25, 0.25), "pitch": (-0.25, 0.25), "yaw": (-0.25, 0.25),
+            },
+        },
+    )
+
+    reset_robot_joints = EventTerm(
+        func=mdp.reset_joints_by_scale,
+        mode="reset",
+        params={
+            # 保持: 初始关节位置轻微扰动是好事
+            "position_range": (-0.1, 0.1),  
+            "velocity_range": (0.0, 0.0), 
+        },
+    )
+
+    # ==========================================================
+    # 3. 运行中干扰 (Interval) - 抗推力测试
+    # ==========================================================
+    
+    push_robot = EventTerm(
+        func=mdp.apply_external_force_torque_stochastic,  # 随机外力扰动 / Stochastic external force disturbance
+        mode="interval",                            # 间隔模式 / Interval mode
+        interval_range_s=(0.0, 0.0),               # 间隔时间范围 / Interval time range
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
+            # 力的范围 [N] / Force range [N]
+            "force_range": {
+                "x": (-60.0, 60.0), "y": (-60.0, 60.0), "z": (-0.0, 0.0),
+            },
+            # 力矩范围 [N⋅m] / Torque range [N⋅m]
+            "torque_range": {"x": (-10.0, 10.0), "y": (-10.0, 10.0), "z": (-0.0, 0.0)},
+            "probability": 0.002,                   # 发生概率 / Occurrence probability
+        },
+        is_global_time=False,
+        min_step_count_between_reset=0,
+    )
 
 @configclass
 class CommandCfg:
@@ -31,8 +166,8 @@ class CommandCfg:
     
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(0.0, 5.0),
-        rel_standing_envs=0.2,
+        resampling_time_range=(10.0, 15.0),
+        rel_standing_envs=0.1,
         rel_heading_envs=1.0,
         heading_command=False,
         # heading_control_stiffness = 1.0,
