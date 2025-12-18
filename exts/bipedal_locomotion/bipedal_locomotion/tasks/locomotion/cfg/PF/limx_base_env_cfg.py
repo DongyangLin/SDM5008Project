@@ -181,8 +181,6 @@ class ObservarionsCfg:
             params={"command_name": "gait_command"}  # 步态命令 / Gait command
         )
         
-        heights = ObsTerm(func=mdp.height_scan,params={"sensor_cfg": SceneEntityCfg("height_scanner")})
-        
         def __post_init__(self):
             self.enable_corruption = True      # 启用观测损坏 / Enable observation corruption
             self.concatenate_terms = True      # 连接所有观测项 / Concatenate all observation terms
@@ -260,7 +258,7 @@ class ObservarionsCfg:
             func=mdp.generated_commands, 
             params={"command_name": "base_velocity"}  # 速度命令 / Velocity commands
         )
-
+    
     policy: PolicyCfg = PolicyCfg()
     critic: CriticCfg = CriticCfg()
     commands: CommandsObsCfg = CommandsObsCfg()
@@ -416,7 +414,7 @@ class RewardsCfg:
     # 调节相关奖励 / Regulation-related rewards
     pen_base_height = RewTerm(
         func=mdp.base_com_height,                   # 基座高度惩罚 / Base height penalty
-        params={"target_height": 0.65},            # 目标高度 78cm / Target height 78cm
+        params={"target_height": 0.68},            # 目标高度 68 / Target height 78cm
         weight=-20.0,                               # 负权重表示惩罚 / Negative weight indicates penalty
     )
     
@@ -462,7 +460,7 @@ class RewardsCfg:
         weight=-0.1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["foot_[RL]_Link"]),
-            "base_height_target": 0.65,            # 基座目标高度 / Base target height
+            "base_height_target": 0.68,            # 基座目标高度 / Base target height
             "foot_radius": 0.03                    # 足部半径 / Foot radius
         },
     )

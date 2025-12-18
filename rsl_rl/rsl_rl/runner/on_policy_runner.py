@@ -412,7 +412,7 @@ class OnPolicyRunner:
             path,
         )
 
-    def load(self, path, load_optimizer=False):
+    def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)
         self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"])
         self.alg.encoder.load_state_dict(loaded_dict["encoder_state_dict"])

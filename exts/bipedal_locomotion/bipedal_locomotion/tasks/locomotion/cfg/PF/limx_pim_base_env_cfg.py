@@ -376,7 +376,7 @@ class RewardsCfg:
         weight=-0.1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["foot_[RL]_Link"]),
-            "base_height_target": 0.65,            # 基座目标高度 / Base target height
+            "base_height_target": 0.68,            # 基座目标高度 / Base target height
             "foot_radius": 0.03                    # 足部半径 / Foot radius
         },
     )

@@ -31,21 +31,6 @@ class EncoderCfg:
     activation: str = "elu"                       # 激活函数 - ELU激活函数 / Activation function - ELU activation
     orthogonal_init: bool = False                 # 正交初始化 - 是否使用正交权重初始化 / Orthogonal initialization - whether to use orthogonal weight init
 
-# HIM
-@configclass
-class HIMActorCriticCfg(RslRlPpoActorCriticCfg):
-    """
-    HIM Actor-Critic 专用配置类，增加了 Estimator 所需的参数。
-    Inherits from RslRlPpoActorCriticCfg to add HIM-specific estimator parameters.
-    """
-    # 覆盖默认类名，这样 Runner 实例化时会自动寻找 HIMActorCritic
-    class_name: str = "HIMActorCritic" 
-
-    # --- HIM Estimator 特有参数 ---
-    # 对应 him_estimator.py 中的 __init__ 参数
-    enc_hidden_dims: list[int] = MISSING
-    num_prototype: int = 16
-    temperature: float = 1.0
 
 import os
 import copy

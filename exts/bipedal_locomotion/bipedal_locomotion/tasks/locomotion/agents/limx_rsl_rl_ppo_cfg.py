@@ -1,6 +1,6 @@
 from isaaclab.utils import configclass
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
-from bipedal_locomotion.utils.wrappers.rsl_rl.rl_mlp_cfg import EncoderCfg, RslRlPpoAlgorithmMlpCfg, HIMActorCriticCfg
+from bipedal_locomotion.utils.wrappers.rsl_rl.rl_mlp_cfg import EncoderCfg, RslRlPpoAlgorithmMlpCfg
 
 import os
 robot_type = os.getenv("ROBOT_TYPE")  # 从环境变量获取机器人类型 / Get robot type from environment variable
@@ -43,7 +43,7 @@ class PFPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 @configclass
 class PF_TRON1AFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 3000         # 较短的训练周期，适合平地环境 / Shorter training for flat terrain
+    max_iterations = 8000         # 较短的训练周期，适合平地环境 / Shorter training for flat terrain
     save_interval = 200           # 更频繁的保存 / More frequent saving
     experiment_name = "pf_tron_1a_flat"
     empirical_normalization = False   # False ！！！！！！！！！！！！！
