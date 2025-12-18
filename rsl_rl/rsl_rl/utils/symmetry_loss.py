@@ -20,7 +20,8 @@ def G_o_n(obs: torch.Tensor, history_length=5):
             joint_vel(6),
             last_action(6)  ]
     """
-    obs_length = obs.shape[-1] / history_length
+    obs_length = int(obs.shape[-1] / history_length)
+    # print(f"obs_length: {obs_length}")
 
     for i in range(history_length):
         start = i * obs_length
@@ -50,14 +51,16 @@ def G_o_n(obs: torch.Tensor, history_length=5):
 
     return obs
 
-def G_o_p(height_obs: torch.Tensor):
+def G_o_p(height_obs: torch.Tensor, Nx: int = 12, Ny: int = 8):
     """
-    height_obs: [B, H, Ny, Nx] or [B, Ny, Nx]
+    height_obs: [B, Nx*Ny]
     """
-    if height_obs.dim() == 3:
-        return torch.flip(height_obs, dims=[1])
-    else:
-        return torch.flip(height_obs, dims=[2])
+    # print(f"height_obs shape: {height_obs.shape}")
+    grid_height_obs = height_obs.view(-1, Nx, Ny)
+    # print(f"grid_height_obs: {grid_height_obs}")
+    flipped_height_obs = torch.flip(grid_height_obs, dims=[2])  # flip y axis
+    # print(f"flipped_height_obs: {flipped_height_obs}")
+    return flipped_height_obs.view_as(height_obs)
 
 
 def compute_symmetry_loss(actor_critic, obs_n, obs_p, critic_obs, policy_sym_coef, value_sym_coef):

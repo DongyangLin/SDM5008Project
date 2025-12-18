@@ -73,7 +73,9 @@ class Normalization:
 
 class PIMActorCritic(nn.Module):
     is_recurrent = False
-    def __init__(self,  history_length,
+    def __init__(self,  num_actor_obs,
+                        num_critic_obs,
+                        history_length,
                         dim_nonperceptive_obs,
                         dim_perceptive_obs,
                         dim_actions,
@@ -94,7 +96,7 @@ class PIMActorCritic(nn.Module):
         self.dim_actions = dim_actions   # action dimension
 
         actor_input_dim = dim_nonperceptive_obs + dim_perceptive_obs + 3 + 16   # current obs + current perceptive obs + vel + latent
-        critic_input_dim = dim_nonperceptive_obs + dim_perceptive_obs   # next obs + current perceptive obs
+        critic_input_dim = num_critic_obs + dim_perceptive_obs   # next obs + current perceptive obs
 
         # Estimator
         self.estimator = PIMEstimator(history_length=self.history_length, 
@@ -179,7 +181,7 @@ class PIMActorCritic(nn.Module):
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
-    def act_inference(self, obs_history, obs_perceptive=None):
+    def act_inference(self, obs_history, obs_perceptive):
         vel, latent = self.estimator(obs_history, obs_perceptive)
         actions_mean = self.actor(torch.cat((obs_history[:, -self.dim_nonperceptive_obs:], obs_perceptive, vel, latent), dim=-1))
         return actions_mean
@@ -190,5 +192,6 @@ class PIMActorCritic(nn.Module):
     
     def evaluate(self, critic_observations, obs_perceptive, **kwargs):   # Critic
         critic_input = torch.cat((critic_observations, obs_perceptive), dim=-1)
+        # print(f"critic_input: {critic_input.shape}")
         value = self.critic(critic_input)
         return value

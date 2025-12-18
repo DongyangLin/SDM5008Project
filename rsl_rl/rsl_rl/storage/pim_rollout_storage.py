@@ -153,6 +153,7 @@ class PIMRolloutStorage:
             perceptive_obs = None
 
         actions = self.actions.flatten(0, 1)
+        # print(f"values shape: {self.values.shape}")
         values = self.values.flatten(0, 1)
         returns = self.returns.flatten(0, 1)
         old_actions_log_prob = self.actions_log_prob.flatten(0, 1)

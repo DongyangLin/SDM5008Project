@@ -16,10 +16,12 @@ from isaaclab.sim import DomeLightCfg, MdlFileCfg, RigidBodyMaterialCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
+
 from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as GaussianNoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as UniformNoise
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import CommandsCfg as BaseCommandsCfg
-
+from bipedal_locomotion.assets.config.pointfoot_cfg import POINTFOOT_CFG
+from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFSceneCfg, ActionsCfg, EventsCfg, TerminationsCfg
 from bipedal_locomotion.tasks.locomotion import mdp
 from .limx_base_env_cfg import PFSceneCfg
 

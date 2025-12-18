@@ -463,14 +463,14 @@ class PFPIMEnvCfg(PFPIMBaseEnvCfg):
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
             attach_yaw_only=True,
             offset = OffsetCfg(pos=(0, 0, 20.0)),
-            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[0.7, 1.1]), 
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.1, 0.7]), 
             debug_vis=False,
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = None
         self.observations.perceptive.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, 
+                      "offset":0.68}, 
             clip = (-2.0, 2.0),
         )
         
@@ -530,19 +530,19 @@ class PFPIMEnvCfg(PFPIMBaseEnvCfg):
         # Ensure target matches your robot. 
         # Using height scanner to compute height relative to terrain.
         self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
-        self.rewards.pen_base_height.params["target_height"] = 0.78
+        self.rewards.pen_base_height.params["target_height"] = 0.68
 
         # 9. Foot clearance 
         # Eq: sum((p_z_target - p_z)^2 * v_xy)
         # Weight: -0.01
-        self.rewards.pen_feet_clearance = RewTerm(
-            func=mdp.feet_clearance_him, 
-            weight=-0.01, 
-            params={
-                "target_height": 0.15, # p_z_target approx
-                "asset_cfg": SceneEntityCfg("robot", body_names=".*foot_[LR]_Link") # Regex for feet
-            }
-        )
+        # self.rewards.pen_feet_clearance = RewTerm(
+        #     func=mdp.feet_clearance_him, 
+        #     weight=-0.01, 
+        #     params={
+        #         "target_height": 0.15, # p_z_target approx
+        #         "asset_cfg": SceneEntityCfg("robot", body_names=".*foot_[LR]_Link") # Regex for feet
+        #     }
+        # )
 
         # 10. Action rate 
         # Eq: |a_t - a_{t-1}|^2
@@ -581,24 +581,26 @@ class PFPIMPlayEnvCfg(PFPIMBaseEnvCfg_PLAY):
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
             attach_yaw_only=True,
             offset = OffsetCfg(pos=(0, 0, 20.0)),
-            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[0.7, 1.1]), #TODO: adjust size to fit real robot
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.1, 0.7]), #TODO: adjust size to fit real robot
             debug_vis=True,
             mesh_prim_paths=["/World/ground"],
         )
         self.observations.policy.heights = None
-        self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
+        self.observations.perceptive.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, # the defualt height of robot is 0.78m
+                      "offset":0.68}, # the defualt height of robot is 0.68m
             clip = (-2.0, 2.0),
         )
         
         self.scene.height_scanner.update_period = self.decimation * self.sim.dt
         
-        self.commands.base_velocity.ranges.lin_vel_x = (0.4, 0.5)      
+        self.commands.base_velocity.ranges.lin_vel_x = (0.4, 1.0)      
         self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)     
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
         
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.max_init_terrain_level = None
         self.scene.terrain.terrain_generator = HIM_PLAY_TERRAINS_CFG
+
+        self.commands.base_velocity.debug_vis = True
 
