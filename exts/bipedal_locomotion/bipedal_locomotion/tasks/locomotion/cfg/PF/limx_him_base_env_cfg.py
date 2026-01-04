@@ -147,7 +147,6 @@ from bipedal_locomotion.tasks.locomotion import mdp
 @configclass
 class CommandCfg:
     # 步态命令配置 / Gait command configuration
-    # 步态命令配置 / Gait command configuration
     gait_command = mdp.UniformGaitCommandCfg(
         resampling_time_range=(5.0, 5.0),  # 命令重采样时间范围 (固定5秒) / Command resampling time range (fixed 5s)
         debug_vis=False,                    # 不显示调试可视化 / No debug visualization
@@ -464,6 +463,8 @@ class PFHIMBaseEnvCfg_PLAY(PFHIMBaseEnvCfg):
         self.episode_length_s = 100.0
         
         self.commands.gait_command.ranges.frequencies=(1.5,1.5)
+        
+        self.commands.base_velocity.resampling_time_range = (5.0, 10.0)
 
         # disable randomization for play
         self.observations.policy.enable_corruption = False
