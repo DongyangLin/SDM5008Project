@@ -308,6 +308,48 @@ def foot_clearance_reward(
     reward = foot_z_target_error * foot_velocity_tanh
     return torch.exp(-torch.sum(reward, dim=1) / std)
 
+def foot_clearance_by_contact_reward(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    contact_sensor_cfg: SceneEntityCfg,  # [新增] 必须参数：接触力传感器
+    target_height: tuple[float, float],
+    std: float,
+    foot_radius: float,
+    contact_threshold: float = 0.1,      # [新增] 接触力阈值 (N)，低于此值视为摆动相
+    height_sensor_cfg: SceneEntityCfg | None = None, # [重命名] 可选：原 sensor_cfg，用于地形高度修正
+) -> torch.Tensor:
+    """
+    Reward the swinging feet for clearing a specified height off the ground.
+    Swing phase is determined by contact forces instead of velocity.
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene[contact_sensor_cfg.name]
+    
+    if height_sensor_cfg is not None:
+        # 如果有高度扫描仪（用于崎岖地形），减去地形高度
+        height_scanner: RayCaster = env.scene[height_sensor_cfg.name]
+        # 注意：这里假设扫描仪光线与脚部对应。取平均值是一个简化的做法。
+        terrain_height = torch.mean(height_scanner.data.ray_hits_w[..., 2], dim=1).unsqueeze(1)
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - terrain_height
+    else:
+        # 平坦地形直接使用绝对高度
+        adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
+
+    feet_height = torch.clip(adjusted_height - foot_radius, 0.0, 1.0)
+    min_h, max_h = target_height
+
+    clamped_z = torch.clamp(feet_height, min=min_h, max=max_h)
+    z_error = feet_height - clamped_z
+    foot_z_target_error = torch.square(z_error)
+
+    contact_forces = contact_sensor.data.net_forces_w[:, contact_sensor_cfg.body_ids, 2]
+
+    is_swing = (contact_forces < contact_threshold).float()
+
+    reward = foot_z_target_error * is_swing
+    
+    return torch.exp(-torch.sum(reward, dim=1) / std)
+
 def base_height_rough_l2(
     env: ManagerBasedRLEnv,
     target_height: float,
