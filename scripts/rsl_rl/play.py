@@ -31,7 +31,7 @@ import csv
 import numpy as np
 import torch
 
-from rsl_rl.runner import OnPolicyRunner
+from rsl_rl.runner import OnPolicyRunner, HIMOnPolicyRunner, PIMOnPolicyRunner
 from isaaclab.envs import ManagerBasedRLEnvCfg, DirectMARLEnv, multi_agent_to_single_agent
 from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
@@ -44,7 +44,7 @@ from bipedal_locomotion.utils.wrappers.rsl_rl import RslRlPpoAlgorithmMlpCfg, ex
 # >>> ADDED: helpers
 
 
-def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, logs):
+def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_runner, logs):
 
     def _to_cpu_np(x):
         if x is None:
@@ -303,7 +303,7 @@ def main():
             if obs_pack is None:
                 obs_pack = obs_dict.get("observations", {})
 
-            record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, logs)
+            record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_runner, logs)
 
             step_idx += 1
 

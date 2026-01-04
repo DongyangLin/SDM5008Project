@@ -31,8 +31,8 @@ class GaitCommand(CommandTerm):
 
         # create buffers to store the command
         # command format: [frequency, phase offset, contact duration]
-        # self.gait_command = torch.zeros(self.num_envs, 4, device=self.device)
-        self.gait_command = torch.zeros(self.num_envs, 3, device=self.device)
+        self.gait_command = torch.zeros(self.num_envs, 4, device=self.device)
+        # self.gait_command = torch.zeros(self.num_envs, 3, device=self.device)
         # create metrics dictionary for logging
         self.metrics = {}
 
