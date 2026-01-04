@@ -88,7 +88,6 @@ def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, logs):
         """
         # common candidates for linear vel and angular vel (z)
         lin = obs_pack[..., 27:30]
-        lin = obs_pack[..., 0:3]
         ang = obs_pack[..., 3:6]
 
         lin = _to_cpu_np(lin) if lin is not None else None
