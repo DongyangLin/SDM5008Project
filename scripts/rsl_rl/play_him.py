@@ -50,6 +50,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
 # Import extensions to set up environment tasks
 import bipedal_locomotion  # noqa: F401
 from bipedal_locomotion.utils.wrappers.rsl_rl import export_him_actor_critic_as_jit, export_him_actor_critic_as_onnx
+from play import record_data
 
 
 def main():
