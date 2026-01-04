@@ -130,30 +130,30 @@ def main():
         # )
         
     # reset environment
-    # obs, extras = env.get_observations()
+    obs, extras = env.get_observations()
     
-    # # HIM 关键：从 extras 中提取历史并展平
-    # obs_history = obs
-    # obs_history = obs_history.flatten(start_dim=1)
-    # # simulate environment
-    # while simulation_app.is_running():
-    #     # run everything in inference mode
-    #     with torch.inference_mode():
-    #         # agent stepping
-    #         actions = policy(obs_history)
-    #         ret = env.step(actions)
-    #         # 兼容性处理：检查返回值数量
-    #         if len(ret) == 5:
-    #             obs, rew, terminated, truncated, extras = ret
-    #         else:
-    #             obs, rew, dones, extras = ret # 假设是旧版或 Wrapper 后的 4 值
+    # HIM 关键：从 extras 中提取历史并展平
+    obs_history = obs
+    obs_history = obs_history.flatten(start_dim=1)
+    # simulate environment
+    while simulation_app.is_running():
+        # run everything in inference mode
+        with torch.inference_mode():
+            # agent stepping
+            actions = policy(obs_history)
+            ret = env.step(actions)
+            # 兼容性处理：检查返回值数量
+            if len(ret) == 5:
+                obs, rew, terminated, truncated, extras = ret
+            else:
+                obs, rew, dones, extras = ret # 假设是旧版或 Wrapper 后的 4 值
             
-    #         # HIM
-    #         obs_history = obs
-    #         obs_history = obs_history.flatten(start_dim=1)
+            # HIM
+            obs_history = obs
+            obs_history = obs_history.flatten(start_dim=1)
 
-    # # close the simulator
-    # env.close()
+    # close the simulator
+    env.close()
 
 
 if __name__ == "__main__":

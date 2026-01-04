@@ -301,6 +301,8 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         # 1. 地形与课程设置
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.terrain_generator = HIM_TERRAINS_CFG
+        self.scene.terrain.max_init_terrain_level= self.scene.terrain.terrain_generator.num_rows-1
+        # self.curriculum.terrain_levels=None # For Phase 1 and 3
 
         self.scene.height_scanner = RayCasterCfg(
             prim_path="{ENV_REGEX_NS}/Robot/base_Link",
@@ -313,7 +315,171 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         self.observations.policy.heights = None
         self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.65}, 
+                      "offset":0.68}, 
+            clip = (-2.0, 2.0),
+        )
+        
+        self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        
+        self.commands.base_velocity.limit_ranges.lin_vel_x = (-0.2, 1.0)      
+        self.commands.base_velocity.limit_ranges.lin_vel_y = (-0.2, 0.2)     
+        self.commands.base_velocity.limit_ranges.ang_vel_z = (-0.0, 0.0) # For Phase 2
+        # self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6) # Phase 2
+        
+        # Close Vel Curriculum, for phase 2
+        self.curriculum.lin_vel_cmd_levels = None 
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 1.0) # For Phase 2
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)     
+        # self.commands.base_velocity.ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
+         
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0) # For Phase 2
+
+        # # =========================================================================
+        # # REWARD MODIFICATIONS (Strictly following HIM Table 5)
+        # # =========================================================================
+
+        # 1. Linear velocity tracking 
+        # Eq: exp(-|v_cmd - v_xy|^2 / sigma)
+        # Weight: 1.0
+        # self.rewards.rew_lin_vel_xy.weight = 1.25
+        self.rewards.rew_lin_vel_xy.weight = 1.0
+        self.rewards.rew_lin_vel_xy.params["std"] = 0.25 # sigma = 0.25
+
+        # 2. Angular velocity tracking 
+        # Eq: exp(-|w_cmd - w_yaw|^2 / sigma)
+        # Weight: 0.5
+        self.rewards.rew_ang_vel_z.weight = 0.5
+        self.rewards.rew_ang_vel_z.params["std"] = 0.25 # sigma = 0.25
+
+        # 3. Linear velocity (z) 
+        # Eq: v_z^2
+        # Weight: -2.0
+        self.rewards.pen_lin_vel_z.weight = -2.0
+
+        # 4. Angular velocity (xy) 
+        # Eq: |w_xy|^2
+        # Weight: -0.05
+        self.rewards.pen_ang_vel_xy.weight = -0.05
+
+        # 5. Orientation 
+        # Eq: |g_proj|^2 (approx via flat_orientation_l2)
+        # Weight: -0.2
+        self.rewards.pen_flat_orientation.weight = -2.0 # Stable pen_flat_orientation weight
+
+        # 6. Joint accelerations 
+        # Eq: |theta_ddot|^2
+        # Weight: -2.5e-7
+        self.rewards.pen_joint_accel.weight = -2.5e-7
+
+        # 7. Joint power 
+        # Eq: |tau * theta_dot|
+        # Weight: -2e-5
+        self.rewards.pen_joint_powers.weight = -2e-5
+
+        # 8. Body height 
+        # Eq: (h_target - h)^2
+        # Weight: -1.0
+        self.rewards.pen_base_height.weight = -1.0
+        # Important: HIM targets robot base height relative to ground. 
+        # Using height scanner to compute height relative to terrain.
+        self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
+        self.rewards.pen_base_height.params["target_height"] = 0.68
+
+        # 9. Foot clearance 
+        # Eq: sum((p_z_target - p_z)^2 * v_xy)
+        # Weight: -0.01
+        self.rewards.rew_feet_clearance.weight=0.2 # Stable clearance reward !!!!
+
+        # 10. Action rate 
+        # Eq: |a_t - a_{t-1}|^2
+        # Weight: -0.01
+        self.rewards.pen_action_rate.weight = -0.01
+
+        # 11. Smoothness 
+        # Eq: |a_t - 2a_{t-1} + a_{t-2}|^2
+        # Weight: -0.01
+        self.rewards.pen_action_smoothness.weight = -0.01
+        
+        # For bipedal robot
+        self.rewards.test_gait_reward.weight = 0.5 # Stable gait penalty !!!
+        self.rewards.pen_feet_distance.weight = -40.0 # Stable feet_distance penalty !!!
+        self.rewards.keep_balance.weight = 0.3 # Stable weight
+        # self.rewards.keep_balance.weight = 1.0
+
+        # =========================================================================
+        # REMOVE NON-HIM REWARDS
+        # =========================================================================
+        # HIM does not use these specific regularization terms
+        self.rewards.pen_feet_regulation = None # Not need
+        self.rewards.foot_landing_vel = None # Not need
+        self.rewards.pen_undesired_contacts = None # Not need (though often kept for safety, strictly HIM doesn't list it)
+        self.rewards.pen_joint_pos_limits = None # Not need
+        self.rewards.pen_joint_vel_l2 = None # Not need (covered by power/smoothness)
+        self.rewards.pen_joint_torque = None # Not need (covered by power)
+        
+        # debug_vis
+        self.commands.base_velocity.debug_vis=False # accelerate the training process
+        
+@configclass
+class PFHIMPlayEnvCfg(PFHIMBaseEnvCfg_PLAY):
+    def __post_init__(self):
+        super().__post_init__()
+        
+        self.scene.height_scanner = RayCasterCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/base_Link",
+            attach_yaw_only=True,
+            offset = OffsetCfg(pos=(0, 0, 20.0)),
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.2, 0.8]), #TODO: adjust size to fit real robot
+            debug_vis=False,
+            mesh_prim_paths=["/World/ground"],
+        )
+        self.observations.policy.heights = None
+        self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
+            params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
+                      "offset":0.68}, # the defualt height of robot is 0.78m
+            clip = (-2.0, 2.0),
+        )
+        
+        self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        
+        self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 1.0)      
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)     
+        # self.commands.base_velocity.ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0)
+        self.commands.base_velocity.debug_vis = True
+        
+        self.scene.terrain.terrain_type = "generator"
+        self.scene.terrain.max_init_terrain_level = None
+        self.scene.terrain.terrain_generator = HIM_PLAY_TERRAINS_CFG
+        # self.curriculum.terrain_levels=None
+
+
+#############################
+# PIM带高度扫描的双足机器人楼梯环境 / Pointfoot Stairs Environment with Height Scanning
+#############################
+
+@configclass
+class PFPIMEnvCfg(PFPIMBaseEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        
+        # ... (Terrain, Height Scanner, Observations, Commands setup remains the same) ...
+        # 1. 地形与课程设置
+        self.scene.terrain.terrain_type = "generator"
+        self.scene.terrain.terrain_generator = HIM_TERRAINS_CFG
+
+        self.scene.height_scanner = RayCasterCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/base_Link",
+            attach_yaw_only=True,
+            offset = OffsetCfg(pos=(0, 0, 20.0)),
+            pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[0.7, 1.1]), 
+            debug_vis=False,
+            mesh_prim_paths=["/World/ground"],
+        )
+        self.observations.policy.heights = None
+        self.observations.perceptive.heights = ObsTerm(func=mdp.height_scan,
+            params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
+                      "offset":0.78}, 
             clip = (-2.0, 2.0),
         )
         

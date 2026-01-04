@@ -12,142 +12,137 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as GaussianNoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as UniformNoise
 from bipedal_locomotion.assets.config.pointfoot_cfg import POINTFOOT_CFG
-from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFSceneCfg, ActionsCfg, TerminationsCfg
+from bipedal_locomotion.tasks.locomotion.cfg.PF.limx_base_env_cfg import PFSceneCfg, ActionsCfg, TerminationsCfg, EventsCfg
 from bipedal_locomotion.tasks.locomotion import mdp
 
-@configclass
-class EventsCfg:
-    """调整后的中等难度随机化配置 / Medium difficulty randomization events"""
-
-    # ==========================================================
-    # 1. 启动时随机化 (Startup) - 塑造鲁棒性
-    # ==========================================================
+# @configclass
+# class EventsCfg:
+#     # ==========================================================
+#     # 1. 启动时随机化 (Startup) - 塑造鲁棒性
+#     # ==========================================================
     
-    add_base_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
-            # 调整: 从 (-1.0, 3.0) 降为 (-1.0, 1.5)
-            # 给 10-20kg 的机器人加 1.5kg 负载是合理的挑战
-            "mass_distribution_params": (-1.0, 1.5), 
-            "operation": "add",
-        },
-    )
+#     # [HIM Table 6] Payload Mass: [-1, 3] Kg (Additive)
+#     # 模拟额外的负载或底盘重量估计误差
+#     add_payload_mass = EventTerm(
+#         func=mdp.randomize_rigid_body_mass,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
+#             "mass_distribution_params": (-1.0, 3.0), 
+#             "operation": "add",
+#         },
+#     )
 
-    add_link_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*_[LR]_Link"),
-            # 调整: 保持窄范围，(0.9, 1.1) 是标准的中等难度
-            "mass_distribution_params": (0.9, 1.1),
-            "operation": "scale",
-        },
-    )
+#     # [HIM Table 6] Body/Link Mass: [0.8, 1.2] x nominal (Scaling)
+#     # 模拟制造公差，对全身所有连杆进行质量缩放
+#     scale_robot_mass = EventTerm(
+#         func=mdp.randomize_rigid_body_mass,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot", body_names=".*"), # 包含基座和所有连杆
+#             "mass_distribution_params": (0.8, 1.2),
+#             "operation": "scale",
+#         },
+#     )
     
-    radomize_rigid_body_mass_inertia = EventTerm(
-        func=mdp.randomize_rigid_body_mass_inertia,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot"),
-            # 调整: 稍微收窄到 (0.9, 1.1)，避免惯量过大导致控制发散
-            "mass_inertia_distribution_params": (0.9, 1.1),
-            "operation": "scale",
-        },
-    )
+#     radomize_rigid_body_mass_inertia = EventTerm(
+#         func=mdp.randomize_rigid_body_mass_inertia,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot"),
+#             # 调整: 稍微收窄到 (0.9, 1.1)，避免惯量过大导致控制发散
+#             "mass_inertia_distribution_params": (0.9, 1.1),
+#             "operation": "scale",
+#         },
+#     )
     
-    robot_physics_material = EventTerm(
-        func=mdp.randomize_rigid_body_material,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            # 调整: 避免过低的摩擦力 (0.4有点像冰面)，提升下限到 0.5
-            "static_friction_range": (0.5, 1.25), 
-            "dynamic_friction_range": (0.6, 1.0),
-            # 关键调整: 恢复系数必须很低！1.0 是弹力球，机器人会飞。
-            # 0.0 (无弹性) - 0.3 (微弱弹性) 是合理的物理范围
-            "restitution_range": (0.0, 0.3),
-            "num_buckets": 64,
-        },
-    )
+#     # [HIM Table 6] Ground Friction: [0.2, 2.75], Restitution: [0.0, 1.0]
+#     # 物理材质随机化
+#     robot_physics_material = EventTerm(
+#         func=mdp.randomize_rigid_body_material,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+#             "static_friction_range": (0.2, 2.75),   # 论文范围
+#             "dynamic_friction_range": (0.2, 2.75),  # 通常与静态保持一致或略低
+#             "restitution_range": (0.0, 1.0),        # 0.0(无弹) - 1.0(全弹)
+#             "num_buckets": 64,
+#         },
+#     )
 
-    robot_joint_stiffness_and_damping = EventTerm(
-        func=mdp.randomize_actuator_gains,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            # 调整: 稍微收窄范围，避免电机特性差异过大
-            # 假设你的名义刚度在 40 左右
-            "stiffness_distribution_params": (35.0, 45.0), 
-            "damping_distribution_params": (2.2, 2.8),
-            "operation": "abs", 
-            "distribution": "uniform",
-        },
-    )
+#     # [HIM Table 6] Joint Kp/Kd: [0.8, 1.2] x nominal (Scaling)
+#     # 电机增益随机化
+#     robot_joint_stiffness_and_damping = EventTerm(
+#         func=mdp.randomize_actuator_gains,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+#             "stiffness_distribution_params": (0.8, 1.2), 
+#             "damping_distribution_params": (0.8, 1.2),
+#             "operation": "scale",   # 改为缩放模式，适应论文的 "x nominal"
+#             "distribution": "uniform",
+#         },
+#     )
 
-    robot_center_of_mass = EventTerm(
-        func=mdp.randomize_rigid_body_coms,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot"),
-            # 关键调整: 从 7.5cm 降为 2cm
-            # 2cm 的偏移对于双足机器人已经很难了，但物理上还有解
-            "com_distribution_params": ((-0.05, 0.05), (-0.02, 0.02), (-0.02, 0.02)),
-            "operation": "add",
-            "distribution": "uniform",
-        },
-    )
+#     # [HIM Table 6] CoM: [-0.1, 0.1] m (Additive in x, y, z)
+#     # 质心偏移，范围很大，极大考验平衡能力
+#     randomize_com = EventTerm(
+#         func=mdp.randomize_rigid_body_coms,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot"),
+#             "com_distribution_params": ((-0.1, 0.1), (-0.1, 0.1), (-0.1, 0.1)),
+#             "operation": "add",
+#             "distribution": "uniform",
+#         },
+#     )
 
-    # ==========================================================
-    # 2. 重置时随机化 (Reset) - 增加初始状态多样性
-    # ==========================================================
+#     # ==========================================================
+#     # 2. 重置时随机化 (Reset) - 增加初始状态多样性
+#     # ==========================================================
     
-    reset_robot_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
-            # 调整: 初始速度从 0.5 降为 0.25
-            # 给一个轻微的初速度，而不是把机器人扔出去
-            "velocity_range": {
-                "x": (-0.25, 0.25), "y": (-0.25, 0.25), "z": (-0.25, 0.25),
-                "roll": (-0.25, 0.25), "pitch": (-0.25, 0.25), "yaw": (-0.25, 0.25),
-            },
-        },
-    )
+#     reset_robot_base = EventTerm(
+#         func=mdp.reset_root_state_uniform,
+#         mode="reset",
+#         params={
+#             "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+#             "velocity_range": {
+#                 "x": (-0.5, 0.5), "y": (-0.5, 0.5), "z": (-0.5, 0.5),
+#                 "roll": (-0.5, 0.5), "pitch": (-0.5, 0.5), "yaw": (-0.5, 0.5),
+#             },
+#         },
+#     )
 
-    reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_by_scale,
-        mode="reset",
-        params={
-            # 保持: 初始关节位置轻微扰动是好事
-            "position_range": (-0.1, 0.1),  
-            "velocity_range": (0.0, 0.0), 
-        },
-    )
+#     reset_robot_joints = EventTerm(
+#         func=mdp.reset_joints_by_scale,
+#         mode="reset",
+#         params={
+#             "position_range": (0.5, 1.5),  
+#             "velocity_range": (0.0, 0.0), 
+#         },
+#     )
 
-    # ==========================================================
-    # 3. 运行中干扰 (Interval) - 抗推力测试
-    # ==========================================================
+#     # ==========================================================
+#     # 3. 运行中干扰 (Interval) - 抗推力测试
+#     # ==========================================================
     
-    push_robot = EventTerm(
-        func=mdp.apply_external_force_torque_stochastic,  # 随机外力扰动 / Stochastic external force disturbance
-        mode="interval",                            # 间隔模式 / Interval mode
-        interval_range_s=(0.0, 0.0),               # 间隔时间范围 / Interval time range
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
-            # 力的范围 [N] / Force range [N]
-            "force_range": {
-                "x": (-60.0, 60.0), "y": (-60.0, 60.0), "z": (-0.0, 0.0),
-            },
-            # 力矩范围 [N⋅m] / Torque range [N⋅m]
-            "torque_range": {"x": (-10.0, 10.0), "y": (-10.0, 10.0), "z": (-0.0, 0.0)},
-            "probability": 0.002,                   # 发生概率 / Occurrence probability
-        },
-        is_global_time=False,
-        min_step_count_between_reset=0,
-    )
+#     push_robot = EventTerm(
+#         func=mdp.apply_external_force_torque_stochastic,  # 随机外力扰动 / Stochastic external force disturbance
+#         mode="interval",                            # 间隔模式 / Interval mode
+#         interval_range_s=(0.0, 0.0),               # 间隔时间范围 / Interval time range
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
+#             # 力的范围 [N] / Force range [N]
+#             "force_range": {
+#                 "x": (-60.0, 60.0), "y": (-60.0, 60.0), "z": (-30.0, 30.0),
+#             },
+#             # 力矩范围 [N⋅m] / Torque range [N⋅m]
+#             "torque_range": {"x": (-10.0, 10.0), "y": (-10.0, 10.0), "z": (-0.0, 0.0)},
+#             "probability": 0.002,                   # 发生概率 / Occurrence probability
+#         },
+#         is_global_time=False,
+#         min_step_count_between_reset=0,
+#     )
 
 @configclass
 class CommandCfg:
@@ -383,9 +378,9 @@ class RewardsCfg:
         func=mdp.foot_clearance_reward, 
         weight=0.5, 
         params={
-            "std": 0.05,
-            "tanh_mult": 2.0,
-            "target_height": [0.10, 0.20], # p_z_target approx
+            "std": 0.02,
+            "tanh_mult": 3.0,
+            "target_height": [0.15, 0.25], # p_z_target approx
             "asset_cfg": SceneEntityCfg("robot", body_names=".*foot_[LR]_Link"), # Regex for feet
             "sensor_cfg": SceneEntityCfg("height_scanner"),
             "foot_radius": 0.03,
@@ -450,9 +445,6 @@ class PFHIMBaseEnvCfg(ManagerBasedRLEnvCfg):
             "knee_L_Joint": 0.0,
             "knee_R_Joint": 0.0,
         }
-        # 调整基座质量随机化参数 / Adjust base mass randomization parameters
-        self.events.add_base_mass.params["asset_cfg"].body_names = "base_Link"
-        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 2.0)
 
         # 设置基座接触终止条件 / Set base contact termination condition
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base_Link"
@@ -470,12 +462,19 @@ class PFHIMBaseEnvCfg_PLAY(PFHIMBaseEnvCfg):
         self.scene.num_envs = 32
         
         self.episode_length_s = 100.0
+        
+        self.commands.gait_command.ranges.frequencies=(1.5,1.5)
 
         # disable randomization for play
-        self.observations.policy.enable_corruption = True
+        self.observations.policy.enable_corruption = False
         # remove random pushing event
         self.events.push_robot = None
         # remove random base mass addition event
-        self.events.add_base_mass = None
+        # self.events.add_payload_mass = None
         
+        # self.events.randomize_com = None
+        
+        # self.events.scale_robot_mass = None
+        self.events.add_base_mass = None
+    
         self.curriculum.lin_vel_cmd_levels=None

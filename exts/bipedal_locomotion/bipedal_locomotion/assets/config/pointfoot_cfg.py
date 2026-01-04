@@ -2,7 +2,9 @@ import os
 
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
+from isaaclab.actuators import ImplicitActuator
 from isaaclab.assets.articulation import ArticulationCfg
+from bipedal_locomotion.utils import RandomLaggyActuatorCfg
 
 # 获取当前文件目录并构建USD模型路径
 # Get current file directory and construct USD model path
@@ -53,7 +55,7 @@ POINTFOOT_CFG = ArticulationCfg(
     # 执行器配置 - 定义如何控制机器人关节
     # Actuator configuration - defines how to control robot joints
     actuators={
-        "legs": ImplicitActuatorCfg(
+        "legs": RandomLaggyActuatorCfg(
             joint_names_expr=[
                 "abad_L_Joint",
                 "abad_R_Joint",
@@ -86,6 +88,9 @@ POINTFOOT_CFG = ArticulationCfg(
                 "knee_L_Joint": 2.5,
                 "knee_R_Joint": 2.5,
             },
+            # 新增的时延参数
+            max_lag = 3,          # 最大延迟3步 (例如 60ms @ 50Hz)
+            randomize_lag = True, # 每个环境随机选择 0~3 步延迟
         ),
     },
 )
