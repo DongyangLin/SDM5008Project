@@ -47,7 +47,7 @@ from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
 # Import extensions to set up environment tasks
 import bipedal_locomotion  # noqa: F401
-from bipedal_locomotion.utils.wrappers.rsl_rl import RslRlPpoAlgorithmMlpCfg, export_mlp_as_onnx, export_policy_as_jit
+from bipedal_locomotion.utils.wrappers.rsl_rl.pim_exporter import export_pim_actor_critic_as_jit, export_pim_actor_critic_as_onnx
 
 
 def main():
@@ -101,13 +101,19 @@ def main():
     # obtain the trained policy for inference
     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
 
-     # 导出策略到onnx / Export policy to onnx
+    # 导出策略到jit / Export policy to jit
+    export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+    export_pim_actor_critic_as_jit(
+        ppo_runner.alg.actor_critic, export_model_dir
+    )
+    print("Exported policy as jit script to: ", export_model_dir)
+
     if EXPORT_POLICY:
-        export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
-        export_policy_as_jit(
-            ppo_runner.alg.actor_critic, export_model_dir
+        # 导出策略到onnx / Export policy to onnx
+        export_pim_actor_critic_as_onnx(
+            ppo_runner.alg.actor_critic, export_model_dir,
         )
-        print("Exported policy as jit script to: ", export_model_dir)
+        print("Exported policy as onnx model to: ", export_model_dir)
 
         # export_mlp_as_onnx(
         #     ppo_runner.alg.actor_critic.actor, 
@@ -121,38 +127,38 @@ def main():
         #     "encoder",
         #     ppo_runner.alg.encoder.num_input_dim,
         # )
+    # else:
+        # reset environment
+        obs, extras = env.get_observations()
         
-    # reset environment
-    obs, extras = env.get_observations()
-    
-    # PIM 关键：从 extras 中提取历史并展平, 提取感知观测
-    obs_history = obs
-    obs_history = obs_history.flatten(start_dim=1)
-    obs_perceptive = extras["observations"]["perceptive"].squeeze(1)
-    # simulate environment
-    while simulation_app.is_running():
-        # run everything in inference mode
-        with torch.inference_mode():
-            # agent stepping
-            actions = policy(obs_history, obs_perceptive)
-            ret = env.step(actions)
-            # 兼容性处理：检查返回值数量
-            if len(ret) == 5:
-                obs, rew, terminated, truncated, extras = ret
-            else:
-                obs, rew, dones, extras = ret # 假设是旧版或 Wrapper 后的 4 值
-            
-            # PIM
-            obs_history = obs
-            obs_history = obs_history.flatten(start_dim=1)
-            obs_perceptive = extras["observations"]["perceptive"].squeeze(1)
-
-    # close the simulator
-    env.close()
+        # PIM 关键：从 extras 中提取历史并展平, 提取感知观测
+        obs_history = obs
+        obs_history = obs_history.flatten(start_dim=1)
+        obs_perceptive = extras["observations"]["perceptive"].squeeze(1)
+        # simulate environment
+        while simulation_app.is_running():
+            # run everything in inference mode
+            with torch.inference_mode():
+                # agent stepping
+                actions = policy(obs_history, obs_perceptive)
+                ret = env.step(actions)
+                # 兼容性处理：检查返回值数量
+                if len(ret) == 5:
+                    obs, rew, terminated, truncated, extras = ret
+                else:
+                    obs, rew, dones, extras = ret # 假设是旧版或 Wrapper 后的 4 值
+                
+                # PIM
+                obs_history = obs
+                obs_history = obs_history.flatten(start_dim=1)
+                obs_perceptive = extras["observations"]["perceptive"].squeeze(1)
+                print(f"obs_perceptive: {obs_perceptive}")
+        # close the simulator
+        env.close()
 
 
 if __name__ == "__main__":
-    EXPORT_POLICY = False
+    EXPORT_POLICY = True
     # run the main execution
     main()
     # close sim app

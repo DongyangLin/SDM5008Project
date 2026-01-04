@@ -95,8 +95,8 @@ class PIMActorCritic(nn.Module):
         self.dim_perceptive_obs = dim_perceptive_obs   # dim(o^p_t) = 96
         self.dim_actions = dim_actions   # action dimension
 
-        actor_input_dim = dim_nonperceptive_obs + dim_perceptive_obs + 3 + 16   # current obs + current perceptive obs + vel + latent
-        critic_input_dim = num_critic_obs + dim_perceptive_obs   # next obs + current perceptive obs
+        self.actor_input_dim = dim_nonperceptive_obs + dim_perceptive_obs + 3 + 16   # current obs + current perceptive obs + vel + latent
+        self.critic_input_dim = num_critic_obs + dim_perceptive_obs   # next obs + current perceptive obs
 
         # Estimator
         self.estimator = PIMEstimator(history_length=self.history_length, 
@@ -105,7 +105,7 @@ class PIMActorCritic(nn.Module):
 
         # Policy function (Actor)
         actor_layers = []
-        actor_layers.append(nn.Linear(actor_input_dim, actor_hidden_dims[0]))
+        actor_layers.append(nn.Linear(self.actor_input_dim, actor_hidden_dims[0]))
         actor_layers.append(activation)
         for l in range(len(actor_hidden_dims)):
             if l == len(actor_hidden_dims) - 1:
@@ -118,7 +118,7 @@ class PIMActorCritic(nn.Module):
 
         # Value function (Critic)
         critic_layers = []
-        critic_layers.append(nn.Linear(critic_input_dim, critic_hidden_dims[0]))
+        critic_layers.append(nn.Linear(self.critic_input_dim, critic_hidden_dims[0]))
         critic_layers.append(activation)
         for l in range(len(critic_hidden_dims)):
             if l == len(critic_hidden_dims) - 1:

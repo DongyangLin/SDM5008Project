@@ -55,12 +55,11 @@ def G_o_p(height_obs: torch.Tensor, Nx: int = 12, Ny: int = 8):
     """
     height_obs: [B, Nx*Ny]
     """
-    # print(f"height_obs shape: {height_obs.shape}")
-    grid_height_obs = height_obs.view(-1, Nx, Ny)
-    # print(f"grid_height_obs: {grid_height_obs}")
-    flipped_height_obs = torch.flip(grid_height_obs, dims=[2])  # flip y axis
-    # print(f"flipped_height_obs: {flipped_height_obs}")
-    return flipped_height_obs.view_as(height_obs)
+    B = height_obs.shape[0]
+    height_obs_reshaped = height_obs.view(B, Ny, Nx).transpose(1, 2)
+    height_obs_flipped = torch.flip(height_obs_reshaped, dims=[2]).transpose(1, 2)
+    height_obs_flipped = height_obs_flipped.view(B, Nx * Ny)
+    return height_obs_flipped
 
 
 def compute_symmetry_loss(actor_critic, obs_n, obs_p, critic_obs, policy_sym_coef, value_sym_coef):
@@ -80,4 +79,3 @@ def compute_symmetry_loss(actor_critic, obs_n, obs_p, critic_obs, policy_sym_coe
     value_sym_loss = F.mse_loss(v, v_f)
 
     return policy_sym_coef * policy_sym_loss + value_sym_coef * value_sym_loss
-
