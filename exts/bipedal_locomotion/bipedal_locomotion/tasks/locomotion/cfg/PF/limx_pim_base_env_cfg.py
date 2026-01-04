@@ -19,7 +19,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as GaussianNoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as UniformNoise
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import CommandsCfg as BaseCommandsCfg
-
+from bipedal_locomotion.assets.config.pointfoot_cfg import POINTFOOT_CFG
 from bipedal_locomotion.tasks.locomotion import mdp
 from .limx_base_env_cfg import PFSceneCfg
 
@@ -35,7 +35,8 @@ class CommandCfg:
         resampling_time_range=(5.0, 5.0),  # 命令重采样时间范围 (固定5秒) / Command resampling time range (fixed 5s)
         debug_vis=False,                    # 不显示调试可视化 / No debug visualization
         ranges=mdp.UniformGaitCommandCfg.Ranges(
-            frequencies=(1.5, 2.5),     # 步态频率范围 [Hz] / Gait frequency range [Hz]
+            # frequencies=(1.5, 2.5),     # 步态频率范围 [Hz] / Gait frequency range [Hz]
+            frequencies=(2.0, 2.5),
             offsets=(0.5, 0.5),         # 相位偏移范围 [0-1] / Phase offset range [0-1]
             durations=(0.5, 0.5),       # 接触持续时间范围 [0-1] / Contact duration range [0-1]
             # swing_height=(0.1, 0.2)     # 摆动高度范围 [m] / Swing height range [m]
@@ -374,7 +375,7 @@ class RewardsCfg:
         weight=-0.1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=["foot_[RL]_Link"]),
-            "base_height_target": 0.68,            # 基座目标高度 / Base target height
+            "base_height_target": 0.65,            # 基座目标高度 / Base target height
             "foot_radius": 0.03                    # 足部半径 / Foot radius
         },
     )
@@ -405,6 +406,19 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names="foot_.*"),
             "asset_cfg": SceneEntityCfg("robot", body_names="foot_.*"),
         },
+    )
+
+    rew_feet_clearance = RewTerm(
+        func=mdp.foot_clearance_reward, 
+        weight=0.5, 
+        params={
+            "std": 0.05,
+            "tanh_mult": 2.0,
+            "target_height": [0.10, 0.20], # p_z_target approx
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*foot_[LR]_Link"), # Regex for feet
+            "sensor_cfg": SceneEntityCfg("height_scanner"),
+            "foot_radius": 0.03,
+        }
     )
 
 

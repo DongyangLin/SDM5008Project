@@ -141,7 +141,7 @@ class PIMPPO:
                 
                 self.actor_critic.act(obs_batch, perceptive_obs_batch)  # act
                 actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
-                value_batch = self.actor_critic.evaluate(critic_obs_batch, perceptive_obs_batch).squeeze(1)  # evaluate
+                value_batch = self.actor_critic.evaluate(critic_obs_batch, perceptive_obs_batch)  # evaluate
                 mu_batch = self.actor_critic.action_mean
                 sigma_batch = self.actor_critic.action_std
                 entropy_batch = self.actor_critic.entropy
@@ -173,8 +173,8 @@ class PIMPPO:
 
                 # Value function loss
                 if self.use_clipped_value_loss:
-                    value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(-self.clip_param,
-                                                                                                    self.clip_param)
+                    # print(f"target_values_batch: {target_values_batch.shape}, value_batch: {value_batch.shape}, returns_batch: {returns_batch.shape}")
+                    value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(-self.clip_param, self.clip_param)
                     value_losses = (value_batch - returns_batch).pow(2)
                     value_losses_clipped = (value_clipped - returns_batch).pow(2)
                     value_loss = torch.max(value_losses, value_losses_clipped).mean()
@@ -182,7 +182,7 @@ class PIMPPO:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
                 # Symmetry loss
-                symmetry_loss = self.compute_symmetry_loss(obs_batch, perceptive_obs_batch, critic_obs_batch, actions_batch)
+                symmetry_loss = self.compute_symmetry_loss(obs_batch, perceptive_obs_batch, critic_obs_batch)
 
                 loss = surrogate_loss + symmetry_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
 

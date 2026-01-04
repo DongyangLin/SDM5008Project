@@ -68,6 +68,8 @@ class PIMEstimator(nn.Module):
     def forward(self, obs_history, obs_perceptive):
         ''' obs_history: (batch_size, H*dim_nonperceptive_obs), 
             obs_perceptive: (batch_size, dim_perceptive_obs) '''
+        # print(f"obs_history: {obs_history}")
+        # print(f"obs_perceptive: {obs_perceptive}")
         parts = self.encoder(torch.cat([obs_history.detach(), obs_perceptive.detach()], dim=-1))
         vel, z = parts[..., :3], parts[..., 3:]  # vel, l_S
         z = F.normalize(z, dim=-1, p=2)
@@ -94,8 +96,8 @@ class PIMEstimator(nn.Module):
         vel = next_critic_obs[:, self.dim_nonperceptive_obs: self.dim_nonperceptive_obs + 3].detach()   # ground truth (GT) vel
         next_obs = next_critic_obs.detach()[:, 3: self.dim_nonperceptive_obs + 3]   # next obs without cmd vel (include GT vel)
 
-        z_s = self.encoder(obs_history, obs_perceptive)
-        z_t = self.target(next_obs, obs_perceptive.detach())
+        z_s = self.encoder(torch.cat([obs_history.detach(), obs_perceptive.detach()], dim=-1))
+        z_t = self.target(torch.cat([next_obs, obs_perceptive.detach()], dim=-1))
         pred_vel, z_s = z_s[..., :3], z_s[..., 3:]
 
         z_s = F.normalize(z_s, dim=-1, p=2)   # normalize latent vectors

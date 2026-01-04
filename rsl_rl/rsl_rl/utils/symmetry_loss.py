@@ -20,7 +20,8 @@ def G_o_n(obs: torch.Tensor, history_length=5):
             joint_vel(6),
             last_action(6)  ]
     """
-    obs_length = obs.shape[-1] / history_length
+    obs_length = int(obs.shape[-1] / history_length)
+    # print(f"obs_length: {obs_length}")
 
     for i in range(history_length):
         start = i * obs_length
@@ -50,14 +51,15 @@ def G_o_n(obs: torch.Tensor, history_length=5):
 
     return obs
 
-def G_o_p(height_obs: torch.Tensor):
+def G_o_p(height_obs: torch.Tensor, Nx: int = 12, Ny: int = 8):
     """
-    height_obs: [B, H, Ny, Nx] or [B, Ny, Nx]
+    height_obs: [B, Nx*Ny]
     """
-    if height_obs.dim() == 3:
-        return torch.flip(height_obs, dims=[1])
-    else:
-        return torch.flip(height_obs, dims=[2])
+    B = height_obs.shape[0]
+    height_obs_reshaped = height_obs.view(B, Ny, Nx).transpose(1, 2)
+    height_obs_flipped = torch.flip(height_obs_reshaped, dims=[2]).transpose(1, 2)
+    height_obs_flipped = height_obs_flipped.view(B, Nx * Ny)
+    return height_obs_flipped
 
 
 def compute_symmetry_loss(actor_critic, obs_n, obs_p, critic_obs, policy_sym_coef, value_sym_coef):
@@ -77,4 +79,3 @@ def compute_symmetry_loss(actor_critic, obs_n, obs_p, critic_obs, policy_sym_coe
     value_sym_loss = F.mse_loss(v, v_f)
 
     return policy_sym_coef * policy_sym_loss + value_sym_coef * value_sym_loss
-
