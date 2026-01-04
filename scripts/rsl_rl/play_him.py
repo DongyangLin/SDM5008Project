@@ -21,6 +21,7 @@ parser.add_argument("--num_envs", type=int, default=None, help="Number of enviro
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--checkpoint_path", type=str, default=None, help="Relative path to checkpoint file.")
+parser.add_argument("--save_path", type=str, default=None, help="Path to save play logs (.npz/.csv).")
 
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -54,7 +55,6 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
 # Import extensions to set up environment tasks
 import bipedal_locomotion  # noqa: F401
 from bipedal_locomotion.utils.wrappers.rsl_rl import export_him_actor_critic_as_jit, export_him_actor_critic_as_onnx
-from play import record_data
 
 
 def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, logs):
@@ -90,8 +90,8 @@ def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, logs):
         Returns vx, vy, wz arrays shape (num_envs,)
         """
         # common candidates for linear vel and angular vel (z)
-        lin = obs_pack[..., 32:35]
-        lin = obs_pack[..., 0:3]
+        lin = obs_pack[..., 33:36]
+        # lin = obs_pack[..., 0:3]
         ang = obs_pack[..., 3:6]
 
         lin = _to_cpu_np(lin) if lin is not None else None
@@ -273,19 +273,6 @@ def main():
         export_him_actor_critic_as_onnx(
             ppo_runner.alg.actor_critic, export_model_dir,
         )
-
-        # export_mlp_as_onnx(
-        #     ppo_runner.alg.actor_critic.actor, 
-        #     export_model_dir, 
-        #     "policy",
-        #     ppo_runner.alg.actor_critic.num_actor_obs,
-        # )
-        # export_mlp_as_onnx(
-        #     ppo_runner.alg.encoder,
-        #     export_model_dir,
-        #     "encoder",
-        #     ppo_runner.alg.encoder.num_input_dim,
-        # )
         
     # reset environment
     obs, extras = env.get_observations()
