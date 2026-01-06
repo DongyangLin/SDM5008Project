@@ -382,11 +382,11 @@ class EventsCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
             # 力的范围 [N] / Force range [N]
             "force_range": {
-                "x": (-500.0, 500.0), "y": (-500.0, 500.0), "z": (-0.0, 0.0),
+                "x": (-50.0, 50.0), "y": (-50.0, 50.0), "z": (-0.0, 0.0),
             },
             # 力矩范围 [N⋅m] / Torque range [N⋅m]
-            "torque_range": {"x": (-50.0, 50.0), "y": (-50.0, 50.0), "z": (-0.0, 0.0)},
-            "probability": 0.002,                   # 发生概率 / Occurrence probability
+            "torque_range": {"x": (-5.0, 5.0), "y": (-5.0, 5.0), "z": (-0.0, 0.0)},
+            "probability": 1.0,                   # 发生概率 / Occurrence probability
         },
         is_global_time=False,
         min_step_count_between_reset=0,

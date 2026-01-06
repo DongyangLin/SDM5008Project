@@ -24,6 +24,7 @@ if args_cli.video:
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
+import re
 import gymnasium as gym
 import os
 import time
@@ -44,7 +45,7 @@ from bipedal_locomotion.utils.wrappers.rsl_rl import RslRlPpoAlgorithmMlpCfg, ex
 # >>> ADDED: helpers
 
 
-def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_runner, logs):
+def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_runner, logs, env):
 
     def _to_cpu_np(x):
         if x is None:
@@ -118,6 +119,123 @@ def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_ru
         pitch = np.arctan2(-gx, np.sqrt(gy * gy + gz * gz))
         return roll, pitch
 
+    def _extract_feet_contact_forces(env_instance):
+        try:
+            base_env = env_instance.unwrapped
+            sensor_name = "contact_forces"
+
+            # 1. 获取传感器对象
+            if sensor_name not in base_env.scene.sensors:
+                return np.nan, np.nan
+
+            contact_sensor = base_env.scene.sensors[sensor_name]
+
+            # 2. 获取数据 (Num_Envs, Num_Bodies, 3)
+            # 使用 net_forces_w 获取世界坐标系下的受力 (当前帧，无历史)
+            forces_tensor = contact_sensor.data.net_forces_w
+            forces_np = _to_cpu_np(forces_tensor)
+
+            # 3. [关键步骤] 动态匹配 Body Names
+            # contact_sensor.body_names 是一个列表，例如 ['g1_foot_L_Link', 'g1_foot_R_Link']
+            # 我们需要找到哪个索引对应左脚，哪个对应右脚
+            sensor_body_names = contact_sensor.body_names
+
+            idx_L = -1
+            idx_R = -1
+
+            # 使用正则查找索引
+            for i, name in enumerate(sensor_body_names):
+                # 这里使用你提供的正则逻辑 ".*foot_[LR]_Link"
+                if re.search(r".*foot_L_Link", name):
+                    idx_L = i
+                elif re.search(r".*foot_R_Link", name):
+                    idx_R = i
+
+            # 4. 提取数据
+            val_l = np.nan
+            val_r = np.nan
+
+            # 如果找到了左脚索引
+            if idx_L != -1:
+                vec_l = forces_np[:, idx_L, :]  # (N, 3)
+                val_l = np.mean(
+                    np.linalg.norm(vec_l, axis=-1)
+                )  # 求模长后取所有环境平均
+
+            # 如果找到了右脚索引
+            if idx_R != -1:
+                vec_r = forces_np[:, idx_R, :]  # (N, 3)
+                val_r = np.mean(np.linalg.norm(vec_r, axis=-1))
+
+            return val_l, val_r
+
+        except Exception as e:
+            print(f"[Error] Extract forces failed: {e}")
+            return np.nan, np.nan
+
+    def _extract_non_foot_contact_forces(env_instance):
+        """
+        【修改版】
+        获取当前通过 apply_external_force_torque 施加在机器人身上的主动外力（扰动）。
+        来源：asset._external_force_b
+        注意：这不再是“接触力”，而是你代码里写的“推力/踢力”。
+        """
+        try:
+            base_env = env_instance.unwrapped
+
+            # 1. 获取 Robot Asset
+            # 通常名字是 "robot" 或 "g1"，需要根据你的 config 确认
+            asset_name = "robot" 
+
+            if asset_name not in base_env.scene.keys():
+                # 尝试找找有没有叫 "g1" 的，或者打印 keys 帮你 debug
+                # print(f"Available assets: {base_env.scene.keys()}")
+                return np.nan
+
+            robot_asset = base_env.scene[asset_name]
+
+            # 2. [核心修改] 获取外部力 Buffer
+            # 这个 Buffer 存储了本帧施加的扰动 (Num_Envs, Num_Bodies, 3)
+            forces_tensor = robot_asset._external_force_b
+
+            # 转为 Numpy
+            if forces_tensor is None:
+                return 0.0
+
+            forces_np = _to_cpu_np(forces_tensor)
+
+            # 3. 获取 Body Names 用于过滤
+            # robot_asset.body_names 包含了所有连杆的名字
+            asset_body_names = robot_asset.body_names
+
+            # 4. 筛选非足部索引 (通常外力施加在 Base 上，所以这个筛选依然有效)
+            target_indices = []
+
+            for i, name in enumerate(asset_body_names):
+                # 逻辑：排除脚部，统计剩下所有部位（主要是躯干）受到的推力
+                if not re.search(r".*foot_[LR]_Link", name):
+                    target_indices.append(i)
+
+            # 5. 计算受力总和
+            if len(target_indices) > 0:
+                # 提取目标部位数据 (N, Num_Targets, 3)
+                relevant_forces = forces_np[:, target_indices, :]
+
+                # 计算每个刚体受力的模长
+                forces_norm = np.linalg.norm(relevant_forces, axis=-1)
+
+                # 求和：得到每个环境受到的总扰动强度
+                total_disturbance = np.sum(forces_norm, axis=-1)
+
+                # 返回平均值 (Scalar)
+                return np.mean(total_disturbance)
+            else:
+                return 0.0
+
+        except Exception as e:
+            print(f"[Error] Extract external forces failed: {e}")
+            return np.nan
+
     # commanded velocities
     cmd_triplet = _extract_cmd_vxvywz(commands)
     if cmd_triplet is not None:
@@ -134,6 +252,8 @@ def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_ru
 
     # roll/pitch from base quaternion
     roll, pitch = _extract_base_quat(obs_pack)
+    force_l, force_r = _extract_feet_contact_forces(env)
+    external_force = _extract_non_foot_contact_forces(env)
 
     # push to logs (store None-safe; if missing, store NaNs)
     def _mean_or_nan(x):
@@ -157,6 +277,9 @@ def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_ru
     logs["pitch"].append(_mean_or_nan(pitch))
     logs["abs_roll"].append(np.abs(_mean_or_nan(roll)))
     logs["abs_pitch"].append(np.abs(_mean_or_nan(pitch)))
+    logs["contact_force_L"].append(_mean_or_nan(force_l))
+    logs["contact_force_R"].append(_mean_or_nan(force_r))
+    logs["external_force"].append(_mean_or_nan(external_force))
 
     if step_idx % 500 == 0:
         save_dir = os.path.join(log_dir, "play_logs")
@@ -171,7 +294,21 @@ def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_ru
         out = {}
         out["step"] = np.asarray(logs["step"], dtype=np.int64)
         out["wall_time_s"] = np.asarray(logs["wall_time_s"], dtype=np.float64)
-        for k in ["cmd_vx","cmd_vy","cmd_wz","act_vx","act_vy","act_wz","roll","pitch","abs_roll","abs_pitch"]:
+        for k in [
+            "cmd_vx",
+            "cmd_vy",
+            "cmd_wz",
+            "act_vx",
+            "act_vy",
+            "act_wz",
+            "roll",
+            "pitch",
+            "abs_roll",
+            "abs_pitch",
+            "contact_force_L",
+            "contact_force_R",
+            "external_force",
+        ]:
             out[k] = np.asarray(logs[k], dtype=np.float32)  # (T,)
 
         np.savez_compressed(npz_path, **out)
@@ -180,21 +317,42 @@ def record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_ru
         csv_path = os.path.splitext(npz_path)[0] + ".csv"
         with open(csv_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["t_step","wall_time_s","cmd_vx","cmd_vy","cmd_wz","act_vx","act_vy","act_wz","roll","pitch"])
+            writer.writerow(
+                [
+                    "t_step",
+                    "wall_time_s",
+                    "cmd_vx",
+                    "cmd_vy",
+                    "cmd_wz",
+                    "act_vx",
+                    "act_vy",
+                    "act_wz",
+                    "roll",
+                    "pitch",
+                    "force_L",
+                    "force_R",
+                    "external_force",
+                ]
+            )
             T = out["step"].shape[0]
             for t in range(T):
-                writer.writerow([
-                    int(out["step"][t]),
-                    float(out["wall_time_s"][t]),
-                    float(out["cmd_vx"][t]),
-                    float(out["cmd_vy"][t]),
-                    float(out["cmd_wz"][t]),
-                    float(out["act_vx"][t]),
-                    float(out["act_vy"][t]),
-                    float(out["act_wz"][t]),
-                    float(out["roll"][t]),
-                    float(out["pitch"][t]),
-                ])
+                writer.writerow(
+                    [
+                        int(out["step"][t]),
+                        float(out["wall_time_s"][t]),
+                        float(out["cmd_vx"][t]),
+                        float(out["cmd_vy"][t]),
+                        float(out["cmd_wz"][t]),
+                        float(out["act_vx"][t]),
+                        float(out["act_vy"][t]),
+                        float(out["act_wz"][t]),
+                        float(out["roll"][t]),
+                        float(out["pitch"][t]),
+                        float(out["contact_force_L"][t]),  # <--- 写入左脚
+                        float(out["contact_force_R"][t]),  # <--- 写入右脚
+                        float(out["external_force"][t]),  # <--- 写入非足部受力
+                    ]
+                )
         print(f"[INFO] Saved play logs CSV to: {csv_path}")
 
 def main():
@@ -278,6 +436,9 @@ def main():
         "pitch": [],
         "abs_roll": [],
         "abs_pitch": [],
+        "contact_force_L": [],
+        "contact_force_R": [],
+        "external_force": [],
     }
 
     # num_envs = int(getattr(env.unwrapped, "num_envs", getattr(env, "num_envs", 1)))
@@ -298,12 +459,8 @@ def main():
             # >>> ADDED: extract + record
             # pack candidates: prefer infos["observations"], fall back to infos itself, then obs_dict["observations"]
             obs_pack = infos["observations"]["critic"]
-            if obs_pack is None:
-                obs_pack = infos
-            if obs_pack is None:
-                obs_pack = obs_dict.get("observations", {})
 
-            record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_runner, logs)
+            record_data(step_idx, t0_wall, log_dir, args_cli, obs_pack, commands, ppo_runner, logs, env)
 
             step_idx += 1
 

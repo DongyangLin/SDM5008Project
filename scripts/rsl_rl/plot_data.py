@@ -375,6 +375,128 @@ def analyze_robot_data(file_path, smoothing=0.8):
         bbox_inches="tight",
     )
     plt.close(fig3)
+    
+    # =================================================================
+    # Fig 4: Gait Phase Analysis & External Force / 步态相位与外力分析
+    # =================================================================
+    # 修改：创建 2 行 1 列的图表，共享 X 轴
+    # height_ratios=[2, 1] 让上面的步态图稍微高一点，或者 [1, 1] 等高，视喜好而定
+    fig4, (ax_phase, ax_force) = plt.subplots(
+        2, 1, figsize=(10, 8), sharex=True, gridspec_kw={"height_ratios": [1, 1]}
+    )
+
+    # -------------------------------------------------------------------------
+    # Subplot 1: Gait Phase Diagram (Contact Patterns) / 步态图
+    # -------------------------------------------------------------------------
+
+    # 1. 数据处理
+    contact_threshold = 0.5
+    is_contact_L = data["force_L"] > contact_threshold
+    is_contact_R = data["force_R"] > contact_threshold
+
+    # 2. 绘制步态图 (Gantt Chart Style)
+    COLOR_L_FOOT = "#1f77b4"  # 蓝色
+    COLOR_R_FOOT = "#ff7f0e"  # 橙色
+
+    # --- 左脚 ---
+    ax_phase.fill_between(
+        time_axis,
+        1.2,
+        1.8,
+        where=is_contact_L,
+        color=COLOR_L_FOOT,
+        alpha=0.8,
+        label="Left Contact",
+    )
+
+    # --- 右脚 ---
+    ax_phase.fill_between(
+        time_axis,
+        0.2,
+        0.8,
+        where=is_contact_R,
+        color=COLOR_R_FOOT,
+        alpha=0.8,
+        label="Right Contact",
+    )
+
+    # 3. 装饰 Subplot 1
+    ax_phase.set_yticks([0.5, 1.5])
+    ax_phase.set_yticklabels(
+        ["Right Foot", "Left Foot"], fontsize=12, fontweight="bold"
+    )
+    ax_phase.set_ylim(0, 2.0)
+    ax_phase.set_title(
+        f"Gait Phase & External Disturbance Analysis",
+        fontsize=14,
+        fontweight="bold",
+    )
+    ax_phase.grid(True, axis="x", linestyle="--", alpha=0.5)
+
+    # 统计占空比
+    total_steps = len(time_axis)
+    duty_L = np.sum(is_contact_L) / total_steps * 100
+    duty_R = np.sum(is_contact_R) / total_steps * 100
+
+    ax_phase.text(
+        time_axis.min(), 1.85, f"L Duty: {duty_L:.1f}%", color=COLOR_L_FOOT, fontsize=10
+    )
+    ax_phase.text(
+        time_axis.min(), 0.85, f"R Duty: {duty_R:.1f}%", color=COLOR_R_FOOT, fontsize=10
+    )
+
+    # -------------------------------------------------------------------------
+    # Subplot 2: External Force / 外力变化曲线
+    # -------------------------------------------------------------------------
+
+    COLOR_EXT_FORCE = "#d62728"  # 红色，代表警告/扰动
+
+    # 绘制曲线
+    # ax_force.plot(
+    #     time_axis,
+    #     data["external_force"],
+    #     color=COLOR_EXT_FORCE,
+    #     linewidth=1.5,
+    #     label="Disturbance Force",
+    # )
+    
+    plot_smooth_line(
+        ax_force,
+        time_axis,
+        data["external_force"],
+        COLOR_EXT_FORCE,
+        "Disturbance Force (Smoothed)",
+        0.7,
+    )
+
+    # # 填充颜色，让脉冲更明显
+    # ax_force.fill_between(
+    #     time_axis, data["external_force"], 0, color=COLOR_EXT_FORCE, alpha=0.2
+    # )
+
+    # 装饰 Subplot 2
+    ax_force.set_ylabel("Ext Force (N)", fontsize=10, fontweight="bold")
+    ax_force.set_xlabel("Time (s)", fontsize=10, fontweight="bold")
+    ax_force.grid(True, linestyle="--", alpha=0.5)
+    ax_force.legend(loc="upper right")
+
+    # 自动调整 Y 轴范围，留一点余量
+    force_max = data["external_force"].max()
+    if force_max > 0:
+        ax_force.set_ylim(-1.0, force_max * 1.2)  # 稍微留点顶空
+    else:
+        ax_force.set_ylim(-1.0, 10.0)  # 默认范围
+
+    # -------------------------------------------------------------------------
+    # 保存与清理
+    # -------------------------------------------------------------------------
+    plt.tight_layout()
+    plt.savefig(
+        os.path.join(save_dir, f"{experiment_name}_4_gait_phase_with_force.png"),
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.close(fig4)
 
     print(f"图表绘制完成。Smoothing系数: {smoothing}")
 
