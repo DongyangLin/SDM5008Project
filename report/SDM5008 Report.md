@@ -264,8 +264,9 @@
 
 这是核心任务目标。为了最小化均方误差 (MSE)，我们采用了指数核函数形式的奖励，在误差接近 0 时提供密集的梯度信号：
 
-$$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\right) + \alpha_2 \exp\left(-\frac{(\omega_z - \omega_z^{cmd})^2}{\sigma_\omega^2}\right)$$
-
+$$
+r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\right) + \alpha_2 \exp\left(-\frac{(\omega_z - \omega_z^{cmd})^2}{\sigma_\omega^2}\right)
+$$
 在配置中，`rew_lin_vel_xy` 权重设为 **3.0**，`rew_ang_vel_z` 权重设为 **1.5**。高权重的设定迫使智能体将速度追踪作为首要优化目标。
 
 ##### 3.2.2.2 姿态稳定性与存活 (Stability & Survival)
@@ -329,13 +330,13 @@ $$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\r
 
 **图 3: 基座姿态角 (Roll & Pitch) 随时间变化**
 
-<img src="images/SDM5008 Report/flat_3_oscillation.png" alt="flat_3_oscillation" style="zoom:23%;" />
+<img src="images/SDM5008 Report/flat_3_oscillation-1767692293944-1.png" alt="flat_3_oscillation" style="zoom:23%;" />
 
 **数据分析：**
 
 **振荡幅度与有界性 (Amplitude & Boundedness)**
 
-整体来看，机器人表现出了**“动态稳定但伴随高频抖动”**的特性。虽然存在显著的姿态波动，但并未发生发散（倒地），表明控制策略具有鲁棒性。
+整体来看，机器人表现出了**“动态稳定但伴随高频抖动”**的特性。虽然存在姿态波动，但并未发生发散（倒地），表明控制策略具有鲁棒性。
 
 - **Pitch (俯仰角)**：波动范围较大（Range: 0.431 rad，约 $24.7^\circ$）。这是由急加减速引起的惯性效应。曲线中明显的尖峰（如 $t=50s$ 附近）对应了**速度指令的大幅切换**，说明机器人在应对纵向冲击时会产生较大的前后晃动。
 - **Roll (横滚角)**：波动范围相对较小（Range: 0.354 rad，约 $20.3^\circ$）。考虑到双足机器人的横向平衡通常较难维持，这一波动幅度表明机器人在高速运动中左右摇摆较为剧烈，呈现出类似“踏步调整”的策略来维持平衡。
@@ -367,6 +368,8 @@ $$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\r
 | **存活率** (about 1 min continuous) | **100%**                       |
 
 基于 `PFBlindFlatEnvCfg` 的配置，通过高权重的速度追踪奖励配合严格的姿态惩罚，以及推力扰动训练，我们成功训练出了一个在平坦地面上具备高性能速度跟随能力且鲁棒的盲视行走策略。该策略不仅满足了基本的移动需求，还在抗干扰和动作平滑性上达到了预期指标。
+
+
 
 
 ---
