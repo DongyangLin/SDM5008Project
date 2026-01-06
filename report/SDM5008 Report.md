@@ -1,3 +1,21 @@
+
+# **SDM5008 Final Project Report**
+
+---
+
+**Course:** SDM5008 – Advanced Robot Control
+**Project Title:** RL-based Locomotion Control for a Point-Foot Biped in Isaac Lab
+**Platform:** NVIDIA Isaac Lab (Isaac Sim 4.5.0 + Isaac Lab 2.1.0)
+
+**Submitted By:**
+*   **Name:** `Zikun Zhuang` `Zhiyu Wang`
+*   **Student ID:** `12532840` `12532838`
+*   **Email:** `[12532840@mail.susutech.edu.cn]` `[12532838@mail.susutech.edu.cn]`
+
+**Date of Submission:** `[January 8, 2026]`
+
+---
+
 ## 项目简介
 
 本项目构建于 NVIDIA Isaac Lab 仿真平台，旨在为逐际动力（LimX Dynamics）的 TRON1 双足机器人提供一套高效的强化学习运动控制框架。项目核心贡献包括：
@@ -8,7 +26,7 @@
 
 项目核心代码基于逐际动力的 [**TRON1 强化学习开源仓库**](https://github.com/limxdynamics/tron1-rl-isaaclab) 完成。
 
-**关键词：**Isaac Lab, TRON1, Bipedal Locomotion, Reinforcement Learning, PPO, HIM, PIM, Robust Control.
+**关键词:** Isaac Lab, TRON1, Bipedal Locomotion, Reinforcement Learning, PPO, HIM, PIM, Robust Control.
 
 ---
 
@@ -20,7 +38,19 @@
 
 **文件**: `limx_base_env_cfg.py`, `pointfoot_cfg.py`, `terrains_cfg.py`
 
-场景配置模块负责构建物理仿真世界。
+场景配置模块负责定义仿真环境的物理实体和环境属性。在本项目中，这主要体现在 `PFSceneCfg` 类及其引用的资产配置中。
+
+#### 1.1.1 USD 资产加载与物理属性:
+
+在 `exts/bipedal_locomotion/bipedal_locomotion/assets/config/pointfoot_cfg.py` 中，`POINTFOOT_CFG` 定义了机器人的资产属性。
+
+* **USD 路径**: 代码通过 `sim_utils.UsdFileCfg` 加载位于 `../usd/PF_TRON1A/PF_TRON1A.usd` 的通用场景描述（USD）文件，这是机器人的几何与物理模型基础。
+* **刚体与关节属性**: 配置中显式定义了刚体属性（`RigidBodyPropertiesCfg`），如启用自碰撞（`enabled_self_collisions=True`）和求解器迭代次数，确保物理仿真的稳定性。
+* **初始状态**: `init_state` 定义了机器人出生时的默认关节角度（`joint_pos`）和基座位置，为强化学习提供一致的复位状态。
+
+#### 1.1.2 场景集成:
+
+在 `limx_base_env_cfg.py` 的 `PFSceneCfg` 类中，机器人资产被集成到交互式场景中。同时，该类还配置了地形（`TerrainImporterCfg`）、光照（`DomeLightCfg`）以及传感器（如 `ContactSensorCfg` 用于足部接触检测）。
 
 - **机器人资产**:
 
@@ -65,13 +95,20 @@
 
 **文件**: `limx_base_env_cfg.py`, `pointfoot_cfg.py`
 
-动作管理器定义了策略网络输出到物理执行器的映射路径。
+动作管理器定义了智能体（Policy）输出与仿真器执行器之间的接口。
 
 - **控制模式**: **关节位置控制 (Joint Position Control)**。
-- **动作变换**: $q_{target} = q_{default} + \text{scale} \times a_{network}$。其中 `scale=0.25`，将神经网络输出映射到合理的物理角度范围。
+    策略网络的输出被解释为关节位置的目标偏移量。
+- **动作变换**: $q_{target} = q_{default} + \text{scale} \times a_{network}$。
+    其中缩放因子 `scale=0.25`，将神经网络输出映射到合理的物理角度范围。
 - **执行器 (Actuator)**:
   - 使用 `RandomLaggyActuatorCfg` 封装了带有随机延迟的 PD 控制器。
-  - **PD 公式**: $\tau = K_p (q_{target} - q) - K_d \dot{q}$
+  - **PD 控制器**: 
+    实际的力矩生成发生在物理引擎层，由 `pointfoot_cfg.py` 中的 `actuators` 配置定义。项目使用了 `RandomLaggyActuatorCfg`（一种带有随机延迟的隐式执行器配置），其本质是一个比例-微分（PD）控制器。
+    根据配置中的刚度（Stiffness, $K_p$）和阻尼（Damping, $K_d$）参数（例如 `stiffness=40.0`, `damping=2.5`），物理引擎计算最终施加的力矩 $\tau$：
+    $$
+    \tau = K_p (q_{target} - q_{current}) - K_d \dot{q}_{current}
+    $$
   - **Sim-to-Real 优化**:
     - **参数**: $K_p=40.0, K_d=2.5$。
     - **随机延迟**: 引入 `max_lag=3` (仿真步) 的随机延迟，模拟真实硬件的通信滞后，增强策略鲁棒性。
@@ -80,7 +117,18 @@
 
 **文件**: `limx_base_env_cfg.py`, `observations.py`
 
-观测管理器构建状态空间，通过 **Actor-Critic 非对称观测** 设计解决部分可观测问题（POMDP）。
+观测管理器负责构建状态空间，并模拟真实世界的传感器噪声。观测被分为不同的组（Group），通过 **Actor-Critic 非对称观测** 设计解决部分可观测问题（POMDP）。
+
+* **策略观测 (Policy Group)**:
+    `PolicyCfg` 定义了输入给 Actor 网络的观测向量。为了缩小 Sim-to-Real 的差距，这里引入了噪声注入和归一化：
+    * **噪声注入**: 使用 `GaussianNoise` 为观测添加高斯白噪声。例如，`base_ang_vel`（基座角速度）添加了均值为 0、标准差为 0.05 的噪声。
+    * **观测项**: 包含基座角速度、重力投影向量（反映姿态）、关节位置和速度、上一次的动作以及步态指令（`gait_command`）。
+    * **处理流程**: 原始物理数据 $\rightarrow$ 添加噪声 $\rightarrow$ 裁剪（Clip）$\rightarrow$ 缩放（Scale）$\rightarrow$ 神经网络输入。
+
+* **评价观测 (Critic Group)**:
+    `CriticCfg` 定义了输入给 Critic 网络的观测。这是一个“特权”（Privileged）观测空间，仅在训练阶段使用。
+    * **特征**: 包含所有策略观测的无噪声版本（Ground Truth），以及策略网络无法获取的额外信息，如机器人质量（`robot_mass`）、地形高度扫描（`heights`）、接触力（`robot_feet_contact_force`）和物理属性（摩擦力、关节刚度等）。这有助于 Critic 更准确地估计价值函数。
+
 
 | **观测项名称**     | **归属组别**    | **计算逻辑/公式**                                            | **功能与意义**                                               |
 | ------------------ | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -99,7 +147,25 @@
 
 **文件**: `limx_base_env_cfg.py`, `rewards.py`
 
-奖励函数通过 **Tracking (追踪)**、**Regularization (正则化)** 和 **Gait (步态)** 三类项塑造行为。
+奖励管理器通过 `RewardsCfg` 类定义了强化学习的目标函数。奖励函数的设计直接决定了机器人的行为风格。奖励函数通过 **Tracking (追踪)**、**Regularization (正则化)** 和 **Gait (步态)** 三类项塑造行为。
+
+* **奖励项设计**:
+    代码中使用了多种奖励项（`RewTerm`），主要分为两类：
+    - **跟踪奖励 (Tracking Rewards)**: 鼓励机器人服从速度指令。例如 `rew_lin_vel_xy` 使用高斯核函数鼓励实际速度接近指令速度：
+        $$
+        r_{vel} = \exp\left(-\frac{\|v_{cmd} - v_{meas}\|^2}{\sigma^2}\right)
+        $$
+    - **正则化/惩罚 (Regularization/Penalties)**: 抑制不期望的行为。
+        
+        * `pen_joint_accel` 和 `pen_joint_powers`: 惩罚关节加速度和功率，鼓励平滑且节能的运动。
+        * `pen_base_height`: 惩罚基座高度偏离目标值（如 0.68m），维持稳定的站立高度。
+        * `pen_action_smoothness`: 惩罚动作的二阶差分，减少控制器的抖动。
+    
+* **权重的影响**:
+    每个奖励项都有一个 `weight` 参数。
+    * 正权重（如 `keep_balance` 的 `1.0`）表示奖励，促进该行为的发生。
+    * 负权重（如 `pen_joint_torque` 的 `-0.00008`）表示惩罚，抑制该行为。
+    * 权重的绝对值大小决定了该项在总奖励中的主导地位。例如，`pen_base_height` 的权重设为 `-20.0`（在 `limx_base_env_cfg.py` 中），表明高度维持是训练初期极其重要的约束条件。
 
 | **奖励名称**             | **计算公式 (Code Implementation)**                     | **物理含义与功能**                                           |
 | ------------------------ | ------------------------------------------------------ | ------------------------------------------------------------ |
@@ -113,7 +179,9 @@
 | **rew_feet_clearance**   | $\sum (h_{foot} - h_{target})^2 \cdot v_{xy}$ (摆动相) | **越障能力**：在摆动相奖励足端抬高到指定高度，防止踢到台阶边缘。 |
 | **foot_landing_vel**     | $\sum v_{z, impact}^2$ (仅在即将触地时)                | **柔顺性**：惩罚触地瞬间的 Z 轴速度，鼓励轻柔着陆，减少冲击。 |
 
-------
+
+
+---
 
 ## 2. 算法对比分析：Encoder-MLP vs HIM vs PIM
 
@@ -158,6 +226,8 @@
 | **test_gait_reward**     | 步态约束奖励           | 1.0                    | **0.5**                          | **0.4** (或移除)                 | 在复杂地形上，严格的强制步态可能适得其反，因此降低了步态约束的权重。 |
 | **pen_feet_distance**    | 双脚距离惩罚           | -10.0                  | **-40.0**                        | **-40.0**                        | 大幅增加惩罚，防止在楼梯上双脚打架或劈叉。                   |
 | **移除的项**             | 精简奖励函数           | N/A                    | `feet_regulation`, `landing_vel` | `feet_regulation`, `landing_vel` | HIM/PIM 移除了针对平地优化的着陆速度和足部调节规则，依靠物理接触自然演化。 |
+
+
 
 ---
 
@@ -248,7 +318,7 @@ $$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\r
 
 
 
-
+---
 
 ## 4. 抗干扰鲁棒性测试 (Disturbance Rejection)
 
@@ -292,10 +362,17 @@ $$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\r
 ### 4.4 结果与分析 (Results & Analysis)
 
 
+---
 
+## 5. 复杂地形适应 (Terrain Traversal)
 
+---
 
-## 参考文献 (References)
+## 6. 开源项目发布
+
+--- 
+
+## 参考文献
 
 [^1]:Long, J., Ren, J., Shi, M., Wang, Z., Huang, T., Luo, P., & Pang, J. (2024). **Learning Humanoid Locomotion with Perceptive Internal Model**. *arXiv preprint arXiv:2411.14386*. https://arxiv.org/abs/2411.14386
 [^2]:Long, J., Wang, Z., Li, Q., Gao, J., Cao, L., & Pang, J. (2024). **Hybrid Internal Model: Learning Agile Legged Locomotion with Simulated Robot Response**. *The Twelfth International Conference on Learning Representations (ICLR)*. https://arxiv.org/abs/2312.11460
