@@ -465,7 +465,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
         time_axis,
         data["external_force"],
         COLOR_EXT_FORCE,
-        "Disturbance Force (Smoothed)",
+        "Disturbance Force",
         0.0,
     )
 
