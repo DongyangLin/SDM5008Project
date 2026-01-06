@@ -7,8 +7,10 @@ import colorsys
 import matplotlib.colors as mcolors
 
 # ================= 配置区域 =================
-csv_file_path = "logs/rsl_rl/pf_him_stair/2025-12-16_Stable_Phase_3/play_logs/play_log_downstairs.csv"
-experiment_name = "downstairs"
+csv_file_path = (
+    "logs/rsl_rl/pf_tron_1a_flat/2025-12-15_16-38-07/play_logs/play_log_mean.csv"
+)
+experiment_name = "flat"
 # ===========================================
 
 # ================= 全局绘图风格设置 (学术风格) =================
@@ -91,7 +93,7 @@ def fix_roll_phase(roll_data):
     return roll_unwrapped
 
 
-def analyze_robot_data(file_path, smoothing=0.9):
+def analyze_robot_data(file_path, smoothing=0.3):
     file_dir = os.path.dirname(os.path.abspath(file_path))
     save_dir = os.path.join(file_dir, "images")
 
