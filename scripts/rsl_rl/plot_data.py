@@ -93,7 +93,7 @@ def fix_roll_phase(roll_data):
     return roll_unwrapped
 
 
-def analyze_robot_data(file_path, smoothing=0.3):
+def analyze_robot_data(file_path, smoothing=0.8):
     file_dir = os.path.dirname(os.path.abspath(file_path))
     save_dir = os.path.join(file_dir, "images")
 
@@ -348,7 +348,7 @@ def analyze_robot_data(file_path, smoothing=0.3):
         ax2, time_axis, data["pitch"], COLOR_PITCH, "Pitch Angle", smoothing
     )
 
-    ax2.axhline(0.0, color=COLOR_ZERO, linestyle="--", linewidth=1.5, alpha=0.8)
+    ax2.axhline(0.0, color=COLOR_ZERO, linestyle="--", label="Zero Ref", linewidth=1.5, alpha=0.8)
     ax2.fill_between(
         time_axis,
         data["pitch"].min(),

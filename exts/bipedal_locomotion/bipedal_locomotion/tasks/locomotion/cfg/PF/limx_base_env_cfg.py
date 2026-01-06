@@ -108,7 +108,7 @@ class CommandCfg(BaseCommandsCfg):
         self.base_velocity.heading_command = True        # 启用航向命令 / Enable heading commands
         self.base_velocity.debug_vis = True              # 启用调试可视化 / Enable debug visualization
         self.base_velocity.heading_control_stiffness = 1.0  # 航向控制刚度 / Heading control stiffness
-        self.base_velocity.resampling_time_range = (0.0, 5.0)  # 速度命令重采样时间 / Velocity command resampling time
+        self.base_velocity.resampling_time_range = (5.0, 5.0)  # 速度命令重采样时间 / Velocity command resampling time
         self.base_velocity.rel_standing_envs = 0.2       # 站立环境比例 / Standing environments ratio
         self.base_velocity.rel_heading_envs = 0.0        # 航向环境比例 / Heading environments ratio
         # 速度命令范围设置 / Velocity command ranges
