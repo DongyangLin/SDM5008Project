@@ -6,7 +6,9 @@
 2. **前沿算法复现与集成**：通过 IssacSim 仿真在 TRON1 平台上成功复现并部署了 [**HIM (Hybrid Internal Model)**](https://arxiv.org/abs/2411.14386) [^1]与 [**PIM (Perceptive Internal Model)**](https://arxiv.org/abs/2312.11460) [^2]等先进强化学习算法。
 3. **系统性性能评估**：通过多维度的对比实验，详细分析了 HIM、PIM 与基准 **Encoder-MLP** 算法在不同任务场景下的性能差异，为双足机器人的算法选型提供了详尽的数据支持。
 
-项目核心代码基于逐际动力的 [**TRON1 强化学习训练开源仓库**](https://github.com/limxdynamics/tron1-rl-isaaclab) 完成。
+项目核心代码基于逐际动力的 [**TRON1 强化学习开源仓库**](https://github.com/limxdynamics/tron1-rl-isaaclab) 完成。
+
+**关键词：**Isaac Lab, TRON1, Bipedal Locomotion, Reinforcement Learning, PPO, HIM, PIM, Robust Control.
 
 ---
 
@@ -113,13 +115,13 @@
 
 ------
 
-## 2. 算法对比分析：Base vs HIM vs PIM
+## 2. 算法对比分析：Encoder-MLP vs HIM vs PIM
 
 本部分详细对比了代码中实现的三种不同训练配置。它们主要在**观测空间结构**和**奖励函数权重**上有所不同，分别对应不同的研究阶段或方法论。
 
 ### 2.1 算法变体定义
 
-1. **Base (Blind)**: 基础盲视策略，通过本体感知信息估计机器人基座线速度。机器人没有外部感知能力，仅靠本体感觉（IMU、关节）行走。
+1. **Encoder-MLP**: 基础盲视策略，通过本体感知信息估计机器人基座线速度。机器人没有外部感知能力，仅靠本体感觉（IMU、关节）行走。
 
    <img src="images/SDM5008 Report/image-20260105171415652.png" alt="image-20260105171415652" style="zoom:25%;" />
 
@@ -157,11 +159,11 @@
 | **pen_feet_distance**    | 双脚距离惩罚           | -10.0                  | **-40.0**                        | **-40.0**                        | 大幅增加惩罚，防止在楼梯上双脚打架或劈叉。                   |
 | **移除的项**             | 精简奖励函数           | N/A                    | `feet_regulation`, `landing_vel` | `feet_regulation`, `landing_vel` | HIM/PIM 移除了针对平地优化的着陆速度和足部调节规则，依靠物理接触自然演化。 |
 
-### 2.4 总结
+---
 
-1. **BaseBlind**: 这是一个针对**平坦地面**过度优化的配置。通过极高的姿态惩罚 (`-10.0`) 和高度惩罚 (`-20.0`) 强制机器人像“桌子”一样平稳移动，但在遇到台阶时会因为无法适应地形变化而失败。
-2. **HIM**: 严格遵循了 "HIM 论文 (Table 5)" 的参数设置。引入了 Critic 端的地形感知，大幅降低了姿态和高度的约束，增加了**抬脚 (Clearance)** 和 **Z轴稳定性** 的权重，旨在训练出能盲视上下楼梯的鲁棒策略。
-3. **PIM**: 在 HIM 基础上进行了调整。最显著的区别是将 **姿态惩罚 (`pen_flat_orientation`) 从 -2.0 降到了 -0.2**，并增加了 **抬脚奖励 (0.5)**。这表明 PIM 策略旨在探索更加动态、允许躯干大幅倾斜的攀爬动作，可能用于应对更陡峭或不规则的楼梯地形。
+## 3. 平地速度跟随 (Flat Ground Velocity Tracking)
+
+
 
 
 
