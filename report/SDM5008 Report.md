@@ -9,7 +9,7 @@
 **组员信息：**  
 *   **姓名：** `Zikun Zhuang` `Zhiyu Wang`  
 *   **学号：** `12532840` `12532838`  
-*   **邮箱：** `[12532840@mail.susutech.edu.cn]` `[12532838@mail.susutech.edu.cn]`
+*   **邮箱：** `[12532840@mail.sustech.edu.cn]` `[12532838@mail.sustech.edu.cn]`
 
 **提交日期：** `[2026 年 1 月 8 日]`
 
