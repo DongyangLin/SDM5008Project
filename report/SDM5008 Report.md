@@ -156,7 +156,7 @@
         r_{vel} = \exp\left(-\frac{\|v_{cmd} - v_{meas}\|^2}{\sigma^2}\right)
         $$
     - **正则化/惩罚 (Regularization/Penalties)**: 抑制不期望的行为。
-        
+      
         * `pen_joint_accel` 和 `pen_joint_powers`: 惩罚关节加速度和功率，鼓励平滑且节能的运动。
         * `pen_base_height`: 惩罚基座高度偏离目标值（如 0.68m），维持稳定的站立高度。
         * `pen_action_smoothness`: 惩罚动作的二阶差分，减少控制器的抖动。
@@ -237,7 +237,14 @@
 
 本实验阶段的主要任务是实现四足机器人在平坦地面上的稳定运动控制。具体要求策略网络（Policy）能够根据输入的指令 $\mathbf{c} = [v_x^{cmd}, v_y^{cmd}, \omega_z^{cmd}]$，精准地控制机器人的线速度和角速度，同时保持基座姿态（Roll/Pitch）的平稳，避免在高速运动或转向时发生跌倒。
 
-在该任务中，环境被配置为 `PFBlindFlatEnvCfg`。与复杂地形任务不同，此配置移除了高度扫描传感器（`height_scanner = None`），迫使智能体仅依赖本体感觉（Proprioception，即 IMU 和关节编码器数据）来维持平衡并执行运动指令。
+在该任务中，环境被配置为 `PFBlindFlatEnvCfg`。与复杂地形任务不同，采用 **PF Base Blind Flat (Encoder-MLP)** 策略，旨在验证 TRON1 机器人在平坦地面上的全向移动能力与姿态稳定性。
+
+| **配置项 (Configuration)** | **参数设定 (Settings)**                                      | **说明 (Description)**                                       |
+| -------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **算法架构**               | Base Blind (Encoder-MLP)                                     | 仅使用本体感觉 (Proprioception)，无视觉输入                  |
+| **地形环境**               | Flat Plane                                                   | 无障碍物的无限延伸平坦地面                                   |
+| **观测空间**               | $\mathbf{o}_t \in \mathbb{R}^{48}$                           | 包含 $\omega_{base}, \mathbf{g}_{proj}, q, \dot{q}, a_{t-1}$ 及步态指令 |
+| **指令范围**               | $v_x \in [-1.5, 1.5]$ m/s $v_y \in [-1.0, 1.0]$ m/s $\omega_z \in [-0.5, 0.5]$ rad/s | 随机指令每 5 秒重采样一次                                    |
 
 ### 3.2 思路与方法 (Methodology)
 
@@ -257,8 +264,9 @@
 
 这是核心任务目标。为了最小化均方误差 (MSE)，我们采用了指数核函数形式的奖励，在误差接近 0 时提供密集的梯度信号：
 
-$$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\right) + \alpha_2 \exp\left(-\frac{(\omega_z - \omega_z^{cmd})^2}{\sigma_\omega^2}\right)$$
-
+$$
+r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\right) + \alpha_2 \exp\left(-\frac{(\omega_z - \omega_z^{cmd})^2}{\sigma_\omega^2}\right)
+$$
 在配置中，`rew_lin_vel_xy` 权重设为 **3.0**，`rew_ang_vel_z` 权重设为 **1.5**。高权重的设定迫使智能体将速度追踪作为首要优化目标。
 
 ##### 3.2.2.2 姿态稳定性与存活 (Stability & Survival)
@@ -269,7 +277,7 @@ $$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\r
 - **角速度正则化 (`pen_ang_vel_xy`)**: 权重 **-0.05**。抑制非指令方向（Roll/Pitch方向）的角速度，直接减少躯干晃动。
 - **存活奖励 (`keep_balance`)**: 权重 **1.0**。只要机器人未触发终止条件（如基座接触地面），每一步都会获得正向奖励，鼓励长时运行。
 
-##### 2.2.3 动作平滑与步态约束 (Smoothness & Gait)
+##### 3.2.2.3 动作平滑与步态约束 (Smoothness & Gait)
 
 - **步态奖励 (`test_gait_reward`)**: 权重 **1.0**。通过 `GaitReward` 函数，强制机器人学习特定的接触相和摆动相时序，避免生成这种不自然的滑步或跳跃步态，间接提高了行走的稳定性。
 - **平滑性惩罚**: 包括 `pen_joint_accel` (关节加速度)、`pen_action_rate` (动作变化率) 和 `pen_joint_powers` (功率)。这些项虽然权重较小，但对于减少电机抖动、降低 Sim-to-Real 差距至关重要。
@@ -283,81 +291,6 @@ $$r_{vel} = \alpha_1 \exp\left(-\frac{\|v_{xy} - v_{xy}^{cmd}\|^2}{\sigma_v^2}\r
   - **质量 (`add_base_mass`)**: 基座质量在 $[-1.0, 3.0]$ kg 范围内变化，模拟不同负载情况。
   - **摩擦力 (`robot_physics_material`)**: 地面摩擦系数在 $[0.4, 1.2]$ 间变化，确保机器人在不同表面（从滑到涩）都能稳定行走。
   - **关节刚度与阻尼**: 模拟电机特性的不确定性。
-
-### 3.3 实验结果与分析 (Results & Analysis)
-
-*(注：本节数据由后续仿真实验补充)*
-
-#### 3.3.1 速度追踪性能
-
-下图展示了在随机指令序列下的速度追踪响应曲线。
-
-- [插入图表：指令速度 vs. 实际速度 (Vx, Vy, Omega_z)]
-- **定量分析**: 计算整个评估周期的均方误差 (MSE)。
-  - $MSE_{v_x} = \dots$
-  - $MSE_{v_y} = \dots$
-  - $MSE_{\omega_z} = \dots$
-
-#### 3.3.2 姿态稳定性评估
-
-在维持目标速度的过程中，基座的姿态保持情况如下：
-
-- [插入图表：Roll 和 Pitch 随时间变化的曲线]
-- **数据**: Roll 角的最大震荡幅度控制在 $\pm \dots$ rad 以内，Pitch 角控制在 $\pm \dots$ rad 以内，证明了 `pen_flat_orientation` 的有效性。
-
-#### 3.3.3 扰动恢复能力
-
-在 `push_robot` 事件触发时（即外部推力施加瞬间）：
-
-- **观察**: 机器人表现出明显的抗扰动行为（例如：顺势跨步支撑）。
-- **存活率**: 在持续 1 分钟的随机指令与推力干扰测试中，机器人的存活率为 $\dots\%$。
-
-### 3.4 结论 (Conclusion)
-
-基于 `PFBlindFlatEnvCfg` 的配置，通过高权重的速度追踪奖励配合严格的姿态惩罚，以及推力扰动训练，我们成功训练出了一个在平坦地面上具备高性能速度跟随能力且鲁棒的盲视行走策略。该策略不仅满足了基本的移动需求，还在抗干扰和动作平滑性上达到了预期指标。
-
-本实验采用基础的 **Encoder-MLP** 算法在盲视下的策略，旨在验证 TRON1 机器人在平坦地面上的全向移动能力与姿态稳定性。
-
-| **配置项 (Configuration)** | **参数设定 (Settings)**                                      | **说明 (Description)**                                       |
-| -------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| **算法架构**               | Base Blind (Encoder-MLP)                                     | 仅使用本体感觉 (Proprioception)，无视觉输入                  |
-| **地形环境**               | Flat Plane                                                   | 无障碍物的无限延伸平坦地面                                   |
-| **观测空间**               | $\mathbf{o}_t \in \mathbb{R}^{48}$                           | 包含 $\omega_{base}, \mathbf{g}_{proj}, q, \dot{q}, a_{t-1}$ 及步态指令 |
-| **指令范围**               | $v_x \in [-1.5, 1.5]$ m/s $v_y \in [-1.0, 1.0]$ m/s $\omega_z \in [-0.5, 0.5]$ rad/s | 随机指令每 5 秒重采样一次                                    |
-
-**核心奖励函数配置 (Reward Function Setup):**
-
-根据 `limx_base_env_cfg.py`，关键奖励项权重如下，高权重的速度追踪与严格的姿态惩罚是本实验成功的关键：
-$$
-r_{total} = w_{lin} \cdot r_{lin\_vel} + w_{ang} \cdot r_{ang\_vel} + w_{orient} \cdot r_{orientation} + \dots
-$$
-
-| **奖励项 (Reward Term)** | **权重 (Weight)** | **核心公式 (Formula)**                        | **功能**               |
-| ------------------------ | ----------------- | --------------------------------------------- | ---------------------- |
-| `rew_lin_vel_xy`         | **3.0**           | $\exp(-\|v_{xy} - v_{xy}^{cmd}\|^2 / 0.25)$   | 精准追踪平面线速度     |
-| `rew_ang_vel_z`          | **1.5**           | $\exp(-(\omega_z - \omega_z^{cmd})^2 / 0.25)$ | 精准追踪转向角速度     |
-| `pen_flat_orientation`   | **-10.0**         | $\|\mathbf{g}_{proj} - [0, 0, -1]\|$          | **强约束**基座保持水平 |
-| `pen_base_height`        | **-20.0**         | $(h_{base} - 0.68)^2$                         | 锁定基座高度在 0.68m   |
-
-### 3.2 考核指标定义 (Evaluation Metrics)
-
-为量化评估模型性能，我们定义以下指标：
-
-**1. 速度追踪误差 (Velocity Tracking Error, MSE):**
-$$
-MSE_{v} = \frac{1}{T} \sum_{t=1}^{T} \| \mathbf{v}_t^{meas} - \mathbf{v}_t^{cmd} \|^2
-$$
-**2. 姿态稳定性 (Attitude Stability):**
-
-通过 Roll 和 Pitch 角的极差震荡幅度：
-$$
-R_{\phi} = \phi_{\max}-\phi_{\min}, \quad R_{\theta} = \theta_{\max}-\theta_{\min}
-$$
-**3. 存活率 (Survival Rate):**
-$$
-R_{survival} = \frac{N_{success}}{N_{total}} \times 100\%
-$$
-*(其中 $N_{success}$ 为未发生摔倒或基座触地的 Episode 数量)*
 
 ### 3.3 实验结果展示 (Experimental Results)
 
@@ -397,13 +330,13 @@ $$
 
 **图 3: 基座姿态角 (Roll & Pitch) 随时间变化**
 
-<img src="images/SDM5008 Report/flat_3_oscillation.png" alt="flat_3_oscillation" style="zoom:23%;" />
+<img src="images/SDM5008 Report/flat_3_oscillation-1767692293944-1.png" alt="flat_3_oscillation" style="zoom:23%;" />
 
 **数据分析：**
 
 **振荡幅度与有界性 (Amplitude & Boundedness)**
 
-整体来看，机器人表现出了**“动态稳定但伴随高频抖动”**的特性。虽然存在显著的姿态波动，但并未发生发散（倒地），表明控制策略具有鲁棒性。
+整体来看，机器人表现出了**“动态稳定但伴随高频抖动”**的特性。虽然存在姿态波动，但并未发生发散（倒地），表明控制策略具有鲁棒性。
 
 - **Pitch (俯仰角)**：波动范围较大（Range: 0.431 rad，约 $24.7^\circ$）。这是由急加减速引起的惯性效应。曲线中明显的尖峰（如 $t=50s$ 附近）对应了**速度指令的大幅切换**，说明机器人在应对纵向冲击时会产生较大的前后晃动。
 - **Roll (横滚角)**：波动范围相对较小（Range: 0.354 rad，约 $20.3^\circ$）。考虑到双足机器人的横向平衡通常较难维持，这一波动幅度表明机器人在高速运动中左右摇摆较为剧烈，呈现出类似“踏步调整”的策略来维持平衡。
@@ -434,11 +367,9 @@ $$
 | **Pitch 震荡幅度** ($R_\theta$)     | **0.431** rad                  |
 | **存活率** (about 1 min continuous) | **100%**                       |
 
-实验表明，基于 **PF Base Blind Flat** 配置的策略网络：
+基于 `PFBlindFlatEnvCfg` 的配置，通过高权重的速度追踪奖励配合严格的姿态惩罚，以及推力扰动训练，我们成功训练出了一个在平坦地面上具备高性能速度跟随能力且鲁棒的盲视行走策略。该策略不仅满足了基本的移动需求，还在抗干扰和动作平滑性上达到了预期指标。
 
-1. **响应精准**：在 $3.0$ 的高奖励权重驱动下，实现了低延迟的速度指令响应。机器人能够迅速调整自身姿态跟随指令速度。
-2. **姿态平稳**：`-10.0` 的姿态惩罚项有效地抑制了机身晃动，使 Roll/Pitch 大部分时间维持在 $\pm 0.05$ rad 安全范围内。
-3. **鲁棒性**：在持续 1 分钟的随机变速测试中，机器人未发生摔倒，验证了该盲视基准算法在平坦地形上的可靠性。
+
 
 
 ---
@@ -493,7 +424,7 @@ $$
 
 ## 6. 开源项目发布
 
---- 
+---
 
 ## 参考文献
 
