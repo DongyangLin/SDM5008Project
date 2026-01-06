@@ -377,7 +377,7 @@ class EventsCfg:
     push_robot = EventTerm(
         func=mdp.apply_external_force_torque_stochastic,  # 随机外力扰动 / Stochastic external force disturbance
         mode="interval",                            # 间隔模式 / Interval mode
-        interval_range_s=(0.0, 0.0),               # 间隔时间范围 / Interval time range
+        interval_range_s=(0.2, 0.2),               # 间隔时间范围 / Interval time range
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
             # 力的范围 [N] / Force range [N]
@@ -386,7 +386,7 @@ class EventsCfg:
             },
             # 力矩范围 [N⋅m] / Torque range [N⋅m]
             "torque_range": {"x": (-5.0, 5.0), "y": (-5.0, 5.0), "z": (-0.0, 0.0)},
-            "probability": 1.0,                   # 发生概率 / Occurrence probability
+            "probability": 0.3,                   # 发生概率 / Occurrence probability
         },
         is_global_time=False,
         min_step_count_between_reset=0,
@@ -556,3 +556,5 @@ class PFEnvCfg(ManagerBasedRLEnvCfg):
             self.scene.height_scanner.update_period = self.decimation * self.sim.dt
         if self.scene.contact_forces is not None:
             self.scene.contact_forces.update_period = self.sim.dt
+            
+        self.push_maker=None

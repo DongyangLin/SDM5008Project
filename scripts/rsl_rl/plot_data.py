@@ -466,7 +466,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
         data["external_force"],
         COLOR_EXT_FORCE,
         "Disturbance Force (Smoothed)",
-        0.7,
+        0.0,
     )
 
     # # 填充颜色，让脉冲更明显
