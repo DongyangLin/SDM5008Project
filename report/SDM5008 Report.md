@@ -9,7 +9,7 @@
 **组员信息：**  
 *   **姓名：** `Zikun Zhuang` `Zhiyu Wang`  
 *   **学号：** `12532840` `12532838`  
-*   **邮箱：** `[12532840@mail.susutech.edu.cn]` `[12532838@mail.susutech.edu.cn]`
+*   **邮箱：** `[12532840@mail.sustech.edu.cn]` `[12532838@mail.sustech.edu.cn]`
 
 **提交日期：** `[2026 年 1 月 8 日]`
 
@@ -234,7 +234,6 @@
 ## 3. 平地速度跟随 (Flat Ground Velocity Tracking)
 
 ### 3.1 实验设置与算法配置 (Experimental Setup)
-### 3.1 任务定义与目标 (Task Definition)
 
 本实验阶段的主要任务是实现四足机器人在平坦地面上的稳定运动控制。具体要求策略网络（Policy）能够根据输入的指令 $\mathbf{c} = [v_x^{cmd}, v_y^{cmd}, \omega_z^{cmd}]$，精准地控制机器人的线速度和角速度，同时保持基座姿态（Roll/Pitch）的平稳，避免在高速运动或转向时发生跌倒。
 
