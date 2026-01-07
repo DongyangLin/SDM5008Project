@@ -23,13 +23,11 @@ plt.rcParams["grid.linestyle"] = "--"  # 网格线型
 plt.rcParams["font.size"] = 12  # 基础字号
 
 # 定义学术配色 (Hex codes)
-COLOR_CMD = "#FA0101FF"  # 指令: 深灰色 (作为背景参考)
-COLOR_VX = "#1973C2"  # Vx: 经典蓝
-COLOR_VY = "#00B945"  # Vy: 鲜明绿
-COLOR_WZ = "#FF9500"  # Wz: 砖红色 (原来是黑色，但在论文中红色更适合强调角速度)
-COLOR_ROLL = "#00B945"  # Roll: 紫色
-COLOR_PITCH = "#FF9500"  # Pitch: 橙色
-COLOR_ZERO = "#1973C2"  # Zero Line: 浅红色 (珊瑚色)
+COLOR_BLUE = "#1973C2"
+COLOR_GREEN = "#00B945"
+COLOR_ORANGE = "#FF9500"
+COLOR_RED = "#FA0101FF"
+COLOR_PURPLE = "#9B26AF"
 
 
 def get_enhanced_color(hex_color, sat_factor=1.2, val_factor=0.85):
@@ -148,13 +146,13 @@ def analyze_robot_data(file_path, smoothing=0.8):
     ax1.plot(
         time_axis,
         data["cmd_vx"],
-        color=COLOR_CMD,
+        color=COLOR_RED,
         linestyle="--",
         linewidth=1.5,
         label="Cmd (Ref)",
     )
     # 实际值应用平滑
-    plot_smooth_line(ax1, time_axis, data["act_vx"], COLOR_VX, "Act Vx", smoothing)
+    plot_smooth_line(ax1, time_axis, data["act_vx"], COLOR_BLUE, "Act Vx", smoothing)
 
     ax1.set_ylabel("Velocity X (m/s)")
     ax1.set_title(
@@ -170,12 +168,12 @@ def analyze_robot_data(file_path, smoothing=0.8):
     ax2.plot(
         time_axis,
         data["cmd_vy"],
-        color=COLOR_CMD,
+        color=COLOR_RED,
         linestyle="--",
         linewidth=1.5,
         label="Cmd (Ref)",
     )
-    plot_smooth_line(ax2, time_axis, data["act_vy"], COLOR_VY, "Act Vy", smoothing)
+    plot_smooth_line(ax2, time_axis, data["act_vy"], COLOR_GREEN, "Act Vy", smoothing)
 
     ax2.set_ylabel("Velocity Y (m/s)")
     ax2.legend(loc="upper right", frameon=True, framealpha=0.9, edgecolor="gray")
@@ -185,12 +183,12 @@ def analyze_robot_data(file_path, smoothing=0.8):
     ax3.plot(
         time_axis,
         data["cmd_wz"],
-        color=COLOR_CMD,
+        color=COLOR_RED,
         linestyle="--",
         linewidth=1.5,
         label="Cmd (Ref)",
     )
-    plot_smooth_line(ax3, time_axis, data["act_wz"], COLOR_WZ, "Act Wz", smoothing)
+    plot_smooth_line(ax3, time_axis, data["act_wz"], COLOR_ORANGE, "Act Wz", smoothing)
 
     ax3.set_ylabel("Angular Rate Z (rad/s)")
     ax3.set_xlabel("Time (s)")
@@ -266,7 +264,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
         ax.grid(True, axis="y", linestyle="--", alpha=0.5)
 
     # --- Vx ---
-    plot_fitted_gaussian(ax1, err_vx, COLOR_VX, mse_vx, "Error $v_x$")
+    plot_fitted_gaussian(ax1, err_vx, COLOR_BLUE, mse_vx, "Error $v_x$")
     ax1.set_ylabel("Frequency")
     ax1.set_xlabel("Error $v_x$ (m/s)")
     ax1.set_title(
@@ -275,7 +273,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
     ax1.grid(True, axis="y", linestyle="--", alpha=0.5)
 
     # --- Vy ---
-    plot_fitted_gaussian(ax2, err_vy, COLOR_VY, mse_vy, "Error $v_y$")
+    plot_fitted_gaussian(ax2, err_vy, COLOR_GREEN, mse_vy, "Error $v_y$")
     ax2.set_ylabel("Frequency")
     ax2.set_xlabel("Error $v_y$ (m/s)")
     ax2.set_title(
@@ -284,7 +282,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
     ax2.grid(True, axis="y", linestyle="--", alpha=0.5)
 
     # --- Wz ---
-    plot_fitted_gaussian(ax3, err_wz, COLOR_WZ, mse_wz, "Error $\omega_z$")
+    plot_fitted_gaussian(ax3, err_wz, COLOR_ORANGE, mse_wz, "Error $\omega_z$")
     ax3.set_ylabel("Frequency")
     ax3.set_xlabel("Error $\omega_z$ (rad/s)")
     ax3.set_title(
@@ -312,12 +310,12 @@ def analyze_robot_data(file_path, smoothing=0.8):
 
     # --- Roll ---
     # 应用平滑绘制
-    plot_smooth_line(ax1, time_axis, data["roll"], COLOR_ROLL, "Roll Angle", smoothing)
+    plot_smooth_line(ax1, time_axis, data["roll"], COLOR_GREEN, "Roll Angle", smoothing)
 
-    # 0.0 基准线 (使用专门的 COLOR_ZERO 珊瑚色，更美观)
+    # 0.0 基准线 (使用专门的 COLOR_BLUE 珊瑚色，更美观)
     ax1.axhline(
         0.0,
-        color=COLOR_ZERO,
+        color=COLOR_BLUE,
         linestyle="--",
         linewidth=1.5,
         alpha=0.8,
@@ -329,7 +327,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
         time_axis,
         data["roll"].min(),
         data["roll"].max(),
-        color=COLOR_ROLL,
+        color=COLOR_GREEN,
         alpha=0.03,
         linewidth=0,
     )
@@ -345,15 +343,15 @@ def analyze_robot_data(file_path, smoothing=0.8):
 
     # --- Pitch ---
     plot_smooth_line(
-        ax2, time_axis, data["pitch"], COLOR_PITCH, "Pitch Angle", smoothing
+        ax2, time_axis, data["pitch"], COLOR_ORANGE, "Pitch Angle", smoothing
     )
 
-    ax2.axhline(0.0, color=COLOR_ZERO, linestyle="--", label="Zero Ref", linewidth=1.5, alpha=0.8)
+    ax2.axhline(0.0, color=COLOR_BLUE, linestyle="--", label="Zero Ref", linewidth=1.5, alpha=0.8)
     ax2.fill_between(
         time_axis,
         data["pitch"].min(),
         data["pitch"].max(),
-        color=COLOR_PITCH,
+        color=COLOR_ORANGE,
         alpha=0.03,
         linewidth=0,
     )
@@ -375,14 +373,14 @@ def analyze_robot_data(file_path, smoothing=0.8):
         bbox_inches="tight",
     )
     plt.close(fig3)
-    
+
     # =================================================================
     # Fig 4: Gait Phase Analysis & External Force / 步态相位与外力分析
     # =================================================================
     # 修改：创建 2 行 1 列的图表，共享 X 轴
     # height_ratios=[2, 1] 让上面的步态图稍微高一点，或者 [1, 1] 等高，视喜好而定
     fig4, (ax_phase, ax_force) = plt.subplots(
-        2, 1, figsize=(10, 8), sharex=True, gridspec_kw={"height_ratios": [1, 1]}
+        2, 1, figsize=(10, 6), sharex=True, gridspec_kw={"height_ratios": [1, 1]}
     )
 
     # -------------------------------------------------------------------------
@@ -394,91 +392,99 @@ def analyze_robot_data(file_path, smoothing=0.8):
     is_contact_L = data["force_L"] > contact_threshold
     is_contact_R = data["force_R"] > contact_threshold
 
-    # 2. 绘制步态图 (Gantt Chart Style)
-    COLOR_L_FOOT = "#1f77b4"  # 蓝色
-    COLOR_R_FOOT = "#ff7f0e"  # 橙色
+    # 计算上升沿事件 (非接触 -> 接触) 的时间点
+    left_on_idx = np.where(np.diff(is_contact_L.astype(int)) == 1)[0] + 1
+    right_on_idx = np.where(np.diff(is_contact_R.astype(int)) == 1)[0] + 1
 
-    # --- 左脚 ---
-    ax_phase.fill_between(
-        time_axis,
-        1.2,
-        1.8,
-        where=is_contact_L,
-        color=COLOR_L_FOOT,
-        alpha=0.8,
-        label="Left Contact",
+    left_on_times = (
+        time_axis.iloc[left_on_idx].values if len(left_on_idx) > 0 else np.array([])
+    )
+    right_on_times = (
+        time_axis.iloc[right_on_idx].values if len(right_on_idx) > 0 else np.array([])
     )
 
-    # --- 右脚 ---
-    ax_phase.fill_between(
-        time_axis,
-        0.2,
-        0.8,
-        where=is_contact_R,
-        color=COLOR_R_FOOT,
-        alpha=0.8,
-        label="Right Contact",
-    )
+    # 若左脚事件不足两次则无法定义周期
+    phase_times = []
+    phase_deg = []
+    if len(left_on_times) > 1 and len(right_on_times) > 0:
+        # 对每个左脚周期 [L_i, L_{i+1}) 寻找区间内的第一个右脚触地事件
+        for i in range(len(left_on_times) - 1):
+            t0 = left_on_times[i]
+            t1 = left_on_times[i + 1]
+            period = t1 - t0
+            if period <= 0:
+                continue
+            # 在区间内的右脚事件索引
+            mask = (right_on_times >= t0) & (right_on_times < t1)
+            if np.any(mask):
+                t_right = right_on_times[np.where(mask)[0][0]]
+                frac = (t_right - t0) / period
+                phase_times.append((t0 + t1) / 2.0)
+                phase_deg.append(frac * 360.0)
+            else:
+                # 如果区间内没有右脚事件，记录 nan 以便绘图间断
+                phase_times.append((t0 + t1) / 2.0)
+                phase_deg.append(np.nan)
 
-    # 3. 装饰 Subplot 1
-    ax_phase.set_yticks([0.5, 1.5])
-    ax_phase.set_yticklabels(
-        ["Right Foot", "Left Foot"], fontsize=12, fontweight="bold"
-    )
-    ax_phase.set_ylim(0, 2.0)
+    if len(phase_times) > 0:
+        ax_phase.plot(
+            phase_times,
+            phase_deg,
+            "-o",
+            color=COLOR_BLUE,
+            markersize=4,
+            linewidth=1.5,
+            label="Phase (deg)",
+        )
+        # 绘制 180° 参考线（理想交替对应 180°）
+        ax_phase.axhline(
+            180.0,
+            color="gray",
+            linestyle="--",
+            linewidth=1.0,
+            alpha=0.7,
+            label="180° (alternation)",
+        )
+        mean_phase = np.nanmean(phase_deg)
+        std_phase = np.nanstd(phase_deg)
+        ax_phase.text(
+            phase_times[0],
+            350,
+            f"Mean: {mean_phase:.1f}°, STD: {std_phase:.1f}°",
+            fontsize=10,
+            fontweight="bold",
+        )
+    else:
+        ax_phase.text(0.5, 0.5, "No valid cycles/events to compute phase", ha="center")
+
+    ax_phase.set_ylim(-10, 370)
+    ax_phase.set_yticks([0, 90, 180, 270, 360])
+    ax_phase.set_ylabel("Phase (degrees)")
     ax_phase.set_title(
-        f"Gait Phase & External Disturbance Analysis",
-        fontsize=14,
-        fontweight="bold",
+        "Gait Phase Difference (Right relative to Left)", fontweight="bold"
     )
-    ax_phase.grid(True, axis="x", linestyle="--", alpha=0.5)
-
-    # 统计占空比
-    total_steps = len(time_axis)
-    duty_L = np.sum(is_contact_L) / total_steps * 100
-    duty_R = np.sum(is_contact_R) / total_steps * 100
-
-    ax_phase.text(
-        time_axis.min(), 1.85, f"L Duty: {duty_L:.1f}%", color=COLOR_L_FOOT, fontsize=10
-    )
-    ax_phase.text(
-        time_axis.min(), 0.85, f"R Duty: {duty_R:.1f}%", color=COLOR_R_FOOT, fontsize=10
-    )
+    ax_phase.grid(True, linestyle="--", alpha=0.4)
+    ax_phase.legend(loc="upper right")
 
     # -------------------------------------------------------------------------
     # Subplot 2: External Force / 外力变化曲线
     # -------------------------------------------------------------------------
 
-    COLOR_EXT_FORCE = "#d62728"  # 红色，代表警告/扰动
-
-    # 绘制曲线
-    # ax_force.plot(
-    #     time_axis,
-    #     data["external_force"],
-    #     color=COLOR_EXT_FORCE,
-    #     linewidth=1.5,
-    #     label="Disturbance Force",
-    # )
-    
     plot_smooth_line(
         ax_force,
         time_axis,
         data["external_force"],
-        COLOR_EXT_FORCE,
+        COLOR_RED,
         "Disturbance Force",
         0.0,
     )
 
-    # # 填充颜色，让脉冲更明显
-    # ax_force.fill_between(
-    #     time_axis, data["external_force"], 0, color=COLOR_EXT_FORCE, alpha=0.2
-    # )
-
     # 装饰 Subplot 2
-    ax_force.set_ylabel("Ext Force (N)", fontsize=10, fontweight="bold")
-    ax_force.set_xlabel("Time (s)", fontsize=10, fontweight="bold")
+    ax_force.set_ylabel("Ext Force (N)", fontsize=10)
+    ax_force.set_xlabel("Time (s)", fontsize=10)
     ax_force.grid(True, linestyle="--", alpha=0.5)
     ax_force.legend(loc="upper right")
+    ax_force.set_title("External Disturbance Force over Time", fontweight="bold")
 
     # 自动调整 Y 轴范围，留一点余量
     force_max = data["external_force"].max()
