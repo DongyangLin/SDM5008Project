@@ -228,7 +228,7 @@ SDM5008Project/                         # 项目根目录
 ### 4.1 速度跟随 / Velocity Tracking
 
 - **点足盲目平地 / Pointfoot Blind Flat**:
-  ![Flat Velocity Tracking](./media/Flat_velocity_tracking.gif)
+  ![Flat Velocity Tracking](./media/Flat_ground_velocity_tracking.gif)
 
 ### 4.2 抗扰测试 / Disturbance Rejection
 
@@ -249,6 +249,7 @@ SDM5008Project/                         # 项目根目录
   | ![PIM Stairs](./media/PIM_stairs.gif) | ![PIM Slopes](./media/PIM_slopes.gif) |
   | :---: | :---: |
   | **![PIM Obstacles](./media/PIM_obstacles.gif)** | **![PIM Rough](./media/PIM_rough.gif)** |
+  | **![PIM Obstacles](./media/PIM_edge.gif)** |
 
 
 
