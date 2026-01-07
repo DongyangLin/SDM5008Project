@@ -14,6 +14,15 @@
 - 在复杂地形中测试策略的适应能力，如平地、上下楼梯、斜坡、障碍物、粗糙地面等；
 - 对多种运动控制算法进行定性与定量比较（HIM 和 PIM）。
 
+This repository is based on the [NVIDIA IsaacLab](https://github.com/isaac-sim/IsaacLab) simulation platform. For bipedal robot (Point - foot Biped) [limxdynamics TRON1] (https://www.limxdynamics.com/en/tron1) for motion control based on reinforcement learning.
+We systematically completed the entire process from environmental configuration, reward function design, strategy training to robustness testing, and applied HIM (Hybrid Internal Model) and PIM (Perceptive Internal Model) algorithms in the motion control of biped robots. And the performance differences of the two strategic architectures in the bipedal walking task were compared and evaluated.
+
+The project goals include:
+- Achieve stable and controllable bipedal walking in flat ground environments;
+- Achieve precise tracking of expected speed instructions;
+- Test the anti-interference and recovery capabilities of the strategy through random external force disturbances;
+Test the adaptability of the strategy in complex terrains, such as flat ground, going up and down stairs, slopes, obstacles, rough ground, etc.
+Conduct qualitative and quantitative comparisons of multiple motion control algorithms (HIM and PIM).
 
 **关键词 / Keywords:** Isaac Lab, TRON1，Bipedal Locomotion, Reinforcement Learning, PPO, HIM, PIM, Robust Control
 
@@ -116,44 +125,47 @@ SDM5008Project/                         # 项目根目录
 
 ## **2. 环境配置与安装 / Environment Setup & Installation**
 
-请参考 IsaacLab 官方文档：[IsaacLab Installation](https://isaac-sim.github.io/IsaacLab/v2.1.0/source/setup/installation/pip_installation.html)
+请参考 IsaacLab 官方文档：[IsaacLab 安装](https://isaac-sim.github.io/IsaacLab/v2.1.0/source/setup/installation/pip_installation.html)
+Please refer to the official IsaacLab documentation: [IsaacLab Installation](https://isaac-sim.github.io/IsaacLab/v2.1.0/source/setup/installation/pip_installation.html)
 
-- 新建 Conda 环境
+- 新建 Conda 环境 / Create a new Conda environment
   ```bash
     conda create -n env_isaaclab python=3.10
     conda activate env_isaaclab 
   ```
-- 安装 PyTorch
+- 安装 PyTorch / Install PyTorch
   ```bash
     pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu118
   ```
-- 安装 IsaacSim
+- 安装 IsaacSim / Install IsaacSim
   ```bash
     pip install --upgrade pip
     pip install 'isaacsim[all,extscache]==4.5.0' --extra-index-url https://pypi.nvidia.com
   ```
-- 安装 IsaacLab
-  - 克隆 IsaacLab 仓库
+- 安装 IsaacLab / Install IsaacLab
+  - 克隆 IsaacLab 仓库 / Clone the IsaacLab repository 
     ```bash
       git clone -b v2.1.0 https://github.com/isaac-sim/IsaacLab.git
     ```
-  - 安装依赖
+  - 安装依赖 / Install the dependencies
     ```bash
       sudo apt install cmake build-essential
     ```
-  - 安装 IsaacLab
+  - 安装 IsaacLab / Install IsaacLab
     ```bash
       cd IsaacLab
       ./isaaclab.sh --install
     ```
-- 克隆并安装仓库
+- 克隆并安装项目仓库 / Clone and install the project repository
   请将仓库克隆到 `IsaacLab` 文件夹之外！
+  Please clone the repository outside the `IsaacLab` folder!
   ```bash
     git clone https://github.com/DongyangLin/SDM5008Project.git
     cd [repository name]
     python -m pip install -e exts/bipedal_locomotion
   ```
   为了使用 `MLP` 分支，需要卸载原生 `rsl_rl` 库，并安装新的 `rsl_rl` 库：
+  In order to use the `MLP` branch, it is necessary to uninstall the native `rsl_rl` library and install the new `rsl_rl` library:
   ```bash
     pip uninstall rsl-rl-lib
     cd bipedal_locomotion_isaaclab/rsl_rl
@@ -166,7 +178,7 @@ SDM5008Project/                         # 项目根目录
 
 ### 3.1 训练机器人 / Training
 
-- Encoder-MLP 算法
+- Encoder-MLP 算法 / Encoder-MLP Algorithm
   使用 `scripts/rsl_rl/train.py` 脚本直接训练机器人，指定任务：
   Use the `scripts/rsl_rl/train.py` script to train the robot directly, specifying the task:
   ```bash
@@ -183,14 +195,16 @@ SDM5008Project/                         # 项目根目录
     * --seed: 随机数生成器的种子 / Seed for the random number generator
     * --checkpoint_path: 训练起始点模型的相对路径 / Relative path to checkpoint file
   
-- HIM 算法
+- HIM 算法 / HIM Algorithm
   在 `scripts/rsl_rl/train.py` 中注释掉 `runner = OnPolicyRunner(...)`(131行) 并选择 `runner = HIMOnPolicyRunner(...)`(134行) 取消注释，使用 `scripts/rsl_rl/train.py` 脚本训练：
+  Comment out `runner = OnPolicyRunner(...)` in `scripts/rsl_rl/train.py` (Line 131) and select `runner = HIMOnPolicyRunner(...)` (Line 134) uncomment, then  train the robot using the `scripts/rsl_rl/train.py` script:
   ```bash
     python scripts/rsl_rl/train.py --task=Isaac-Limx-PF-Stair-HIM-v0 --headless
   ```
 
-- PIM 算法
+- PIM 算法 / PIM Algorithm
   在 `scripts/rsl_rl/train.py` 中注释掉 `runner = OnPolicyRunner(...)`(131行) 并选择 `runner = PIMOnPolicyRunner(...)`(137行) 取消注释，使用 `scripts/rsl_rl/train.py` 脚本训练：
+  Comment out `runner = OnPolicyRunner(...)` in `scripts/rsl_rl/train.py` (Line 131) and select `runner = PIMOnPolicyRunner(...)` (Line 137) uncomment, then  train the robot using the `scripts/rsl_rl/train.py` script:
   ```bash
     python scripts/rsl_rl/train.py --task=Isaac-Limx-PF-Stair-PIM-v0 --headless
   ```
@@ -232,11 +246,9 @@ SDM5008Project/                         # 项目根目录
 
 ### 4.2 抗扰测试 / Disturbance Rejection
 
-- **HIM 抗扰测试 / HIM Disturbance Rejection**
-  ![HIM Disturbance Rejection](./media/HIM_disturbance_rejection.gif)
-
-- **PIM 抗扰测试 / PIM Disturbance Rejection**
-  ![PIM Disturbance Rejection](./media/PIM_disturbance_rejection.gif)
+  | Encoder-MLP | HIM | PIM |
+  | :---: | :---: | :---: |
+  | ![Encoder-MLP Disturbance Rejection](./media/Flat_ground_disturbance_rejection.gif) | ![HIM Disturbance Rejection](./media/HIM_disturbance_rejection.gif) | ![PIM Disturbance Rejection](./media/PIM_disturbance_rejection.gif) |
 
 ### 4.3 地形适应 / Terrain Traversal
 
