@@ -108,13 +108,13 @@ class CommandCfg(BaseCommandsCfg):
         self.base_velocity.heading_command = True        # 启用航向命令 / Enable heading commands
         self.base_velocity.debug_vis = True              # 启用调试可视化 / Enable debug visualization
         self.base_velocity.heading_control_stiffness = 1.0  # 航向控制刚度 / Heading control stiffness
-        self.base_velocity.resampling_time_range = (5.0, 5.0)  # 速度命令重采样时间 / Velocity command resampling time
-        self.base_velocity.rel_standing_envs = 0.2       # 站立环境比例 / Standing environments ratio
+        self.base_velocity.resampling_time_range = (3.0, 5.0)  # 速度命令重采样时间 / Velocity command resampling time
+        self.base_velocity.rel_standing_envs = 0.02       # 站立环境比例 / Standing environments ratio
         self.base_velocity.rel_heading_envs = 0.0        # 航向环境比例 / Heading environments ratio
         # 速度命令范围设置 / Velocity command ranges
         self.base_velocity.ranges = mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.5, 1.5),      # 前进速度范围 [m/s] / Forward velocity range [m/s]
-            lin_vel_y=(-1.0, 1.0),      # 横向速度范围 [m/s] / Lateral velocity range [m/s]
+            lin_vel_x=(-1.0, 1.0),      # 前进速度范围 [m/s] / Forward velocity range [m/s]
+            lin_vel_y=(-0.5, 0.5),      # 横向速度范围 [m/s] / Lateral velocity range [m/s]
             ang_vel_z=(-0.5, 0.5),      # 转向角速度范围 [rad/s] / Turning angular velocity range [rad/s]
             heading=(-math.pi, math.pi)  # 航向角范围 [rad] / Heading angle range [rad]
         )
