@@ -69,7 +69,7 @@ class PFBaseEnvCfg_PLAY(PFBaseEnvCfg):
         # disable randomization for play
         self.observations.policy.enable_corruption = True
         # remove random pushing event
-        self.events.push_robot = None
+        # self.events.push_robot = None
         # remove random base mass addition event
         self.events.add_base_mass = None
         
@@ -104,18 +104,18 @@ class PFBlindFlatEnvCfg_PLAY(PFBaseEnvCfg_PLAY):
 
         self.curriculum.terrain_levels = None
 
-        # self.commands.base_velocity.ranges.lin_vel_x = (
-        #     0.5,
-        #     0.5,
-        # )  # 固定前进速度范围 / Fixed forward velocity range
-        # self.commands.base_velocity.ranges.lin_vel_y = (
-        #     -0.0,
-        #     0.0,
-        # )  # 无横向移动 / No lateral movement
-        # self.commands.base_velocity.ranges.ang_vel_z = (
-        #     -0.0,
-        #     0.0,
-        # )  # 无转向 / No turning
+        self.commands.base_velocity.ranges.lin_vel_x = (
+            0.5,
+            0.5,
+        )  # 固定前进速度范围 / Fixed forward velocity range
+        self.commands.base_velocity.ranges.lin_vel_y = (
+            -0.0,
+            0.0,
+        )  # 无横向移动 / No lateral movement
+        self.commands.base_velocity.ranges.ang_vel_z = (
+            -0.0,
+            0.0,
+        )  # 无转向 / No turning
 
 
 #############################

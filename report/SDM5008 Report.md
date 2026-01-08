@@ -337,8 +337,6 @@ $$
 | **rew_feet_clearance**   | $\sum (h_{foot} - h_{target})^2 \cdot v_{xy}$ | **越障能力**：在摆动相奖励足端抬高到指定高度，防止踢到台阶边缘。|
 | **foot_landing_vel**     | $\sum v_{z, impact}^2$ | **柔顺性**：惩罚触地瞬间的 Z 轴速度，鼓励轻柔着陆，减少冲击。|
 
-
-
 ---
 
 ## 2. 算法对比分析：Encoder-MLP vs HIM vs PIM
@@ -352,22 +350,25 @@ Encoder-MLP 直接在纯本体感知条件下进行策略学习，完全依赖�
 ### 2.1 算法变体定义
 
 1. **Encoder-MLP**
-  Encoder-MLP 是最基础的盲视策略，依赖本体感知信息估计机器人基座线速度。机器人没有外部感知能力，仅靠本体感知（IMU、关节）行走。
-  <img src="images/Structure_encoder_mlp.png" alt="Structure_encoder_mlp" style="zoom:61%;" />
+    Encoder-MLP 是最基础的盲视策略，依赖本体感知信息估计机器人基座线速度。机器人没有外部感知能力，仅靠本体感知（IMU、关节）行走。
+  
+  <img src="images/Structure_encoder_mlp.png" alt="Structure_encoder_mlp" style="zoom:25%;" />
   - 可观测信息：关节位置 / 速度、IMU 信息（姿态、角速度）、速度指令等本体感知量。
   - 缺失信息：无任何显式环境感知（如地形高度、台阶结构）。
   - 主要能力：平地或弱起伏地形；地形变化缓慢、可由动力学反馈“滞后补偿”的场景。
 
 2. **HIM (Hybrid Internal Model)** 
-  HIM 训练一个基于本体感知历史的**内部模型 (Internal Model/Estimator)**，通过**对比学习**显式地**预测**隐式特权信息，使得 Policy 不仅仅是被 Critic “指导”，而是自身具备了从本体感知中**推理**环境和自身状态的能力。
+    HIM 训练一个基于本体感知历史的**内部模型 (Internal Model/Estimator)**，通过**对比学习**显式地**预测**隐式特权信息，使得 Policy 不仅仅是被 Critic “指导”，而是自身具备了从本体感知中**推理**环境和自身状态的能力。
+  
   <img src="images/Structure_him.png" alt="Structure_him" style="zoom:70%;" />
   - Actor：仍然是盲视的，不直接接收地形高度信息；
   - Critic：拥有特权信息（如地形高度扫描），从而提供更准确的价值估计；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
 
 3. **PIM (Perceptive Internal Model)**
-  在 HIM 的 Policy 观测量基础上，PIM 的 Policy 观测器引入了外部感知，即视觉（高程图）编码器，构建了一个**多模态的内部模型**。PIM 利用雷达扫描信息来**修正和增强**对环境状态的估计（即构建包含环境信息的内部表征），从而让机器人能够**主动规划落点**以应对盲视无法处理的**剧烈地形变化**（如陡峭楼梯或断崖）。
-  <img src="images/Structure_pim.png" alt="Structure_pim" style="zoom:58%;" />
+    在 HIM 的 Policy 观测量基础上，PIM 的 Policy 观测器引入了外部感知，即视觉（高程图）编码器，构建了一个**多模态的内部模型**。PIM 利用雷达扫描信息来**修正和增强**对环境状态的估计（即构建包含环境信息的内部表征），从而让机器人能够**主动规划落点**以应对盲视无法处理的**剧烈地形变化**（如陡峭楼梯或断崖）。
+  
+  <img src="images/SDM5008 Report/Structure_pim.png" alt="Structure_pim" style="zoom:58%;" />
   - Actor：Policy 观测中新增 perceptive 观测，同时接收本体与环境感知信息，使 Actor 能够在决策阶段显式利用地形几何结构；
   - Critic：拥有 perceptive 观测以及其他特权信息；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
@@ -595,7 +596,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 4.4 结果与分析 (Results & Analysis)
 
-<img src="images/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:24%;" />
+<img src="images/SDM5008 Report/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:24%;" />
 
 
 ---
@@ -657,10 +658,12 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 ### 5.4 结果与分析 (Results & Analysis)
 
 - **HIM 台阶地形下速度跟随：**
-<img src="images/him_downstairs_1_velocity_tracking.png" alt="him_downstairs_1_velocity_tracking" style="zoom:24%;" />
+
+  <img src="images/him_downstairs_1_velocity_tracking.png" alt="him_downstairs_1_velocity_tracking" style="zoom:24%;" />
 
 - **PIM 台阶地形下速度跟随：**
-<img src="images/pim_stairs_1_velocity_tracking.png" alt="pim_stairs_1_velocity_tracking" style="zoom:24%;" />
+
+  <img src="images/pim_stairs_1_velocity_tracking.png" alt="pim_stairs_1_velocity_tracking" style="zoom:24%;" />
 
 ---
 

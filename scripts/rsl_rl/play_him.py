@@ -41,9 +41,8 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import os
+import sys
 import time
-import csv
-import numpy as np
 import torch
 
 from rsl_rl.runner import HIMOnPolicyRunner 
@@ -55,8 +54,13 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
 # Import extensions to set up environment tasks
 import bipedal_locomotion  # noqa: F401
 from bipedal_locomotion.utils.wrappers.rsl_rl import export_him_actor_critic_as_jit, export_him_actor_critic_as_onnx
-from data_recorder import DataRecorder
-from camera import CameraController
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.append(parent_dir)
+
+from utils.data_recorder import DataRecorder
+from utils.camera import CameraController
 
 def main():
     """使用RSL-RL智能体进行测试 / Play with RSL-RL agent."""
