@@ -1,5 +1,7 @@
 # **双足机器人强化学习运动控制 / Bipedal Robot RL Locomotion Control with Isaac Lab**
 
+[![License](images/README/license-GPLv3-blue.svg)](LICENSE)
+
 ---
 
 ## **概述 / Overview**
