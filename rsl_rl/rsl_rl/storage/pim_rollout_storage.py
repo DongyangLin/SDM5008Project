@@ -38,7 +38,7 @@ class PIMRolloutStorage:
         def __init__(self):
             self.observations = None
             self.critic_observations = None
-            self.perceptive_observations = None ####
+            self.perceptive_observations = None  # Added for PIM
             self.actions = None
             self.rewards = None
             self.dones = None
@@ -56,7 +56,7 @@ class PIMRolloutStorage:
         self.device = device
 
         self.obs_shape = obs_shape
-        self.perceptive_obs_shape = perceptive_obs_shape  ####
+        self.perceptive_obs_shape = perceptive_obs_shape
         self.privileged_obs_shape = privileged_obs_shape
         self.actions_shape = actions_shape
 
@@ -68,7 +68,7 @@ class PIMRolloutStorage:
         else:
             self.privileged_observations = None
             self.next_privileged_observations = None
-        if perceptive_obs_shape is not None:  ####
+        if perceptive_obs_shape is not None:
             self.perceptive_observations = torch.zeros(num_transitions_per_env, num_envs, *perceptive_obs_shape, device=self.device)
         else:
             self.perceptive_observations = None
@@ -97,7 +97,7 @@ class PIMRolloutStorage:
             self.privileged_observations[self.step].copy_(transition.critic_observations)
         if self.next_privileged_observations is not None: 
             self.next_privileged_observations[self.step].copy_(transition.next_critic_observations)
-        if self.perceptive_observations is not None:   ####
+        if self.perceptive_observations is not None:
             self.perceptive_observations[self.step].copy_(transition.perceptive_observations)
         self.actions[self.step].copy_(transition.actions)
         self.rewards[self.step].copy_(transition.rewards.view(-1, 1))
@@ -147,7 +147,7 @@ class PIMRolloutStorage:
         else:
             critic_observations = observations
             next_critic_observations = observations
-        if self.perceptive_observations is not None:   ####
+        if self.perceptive_observations is not None:
             perceptive_obs = self.perceptive_observations.flatten(0, 1)
         else:
             perceptive_obs = None

@@ -360,18 +360,16 @@ Encoder-MLP 直接在纯本体感知条件下进行策略学习，完全依赖�
 
 2. **HIM (Hybrid Internal Model)** 
     HIM 训练一个基于本体感知历史的**内部模型 (Internal Model/Estimator)**，通过**对比学习**显式地**预测**隐式特权信息，使得 Policy 不仅仅是被 Critic “指导”，而是自身具备了从本体感知中**推理**环境和自身状态的能力。
-    
-    <img src="images/Structure_him.png" alt="Structure_him" style="zoom:85%;" />
-
+  
+  <img src="images/Structure_him.png" alt="Structure_him" style="zoom:70%;" />
   - Actor：仍然是盲视的，不直接接收地形高度信息；
   - Critic：拥有特权信息（如地形高度扫描），从而提供更准确的价值估计；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
 
 3. **PIM (Perceptive Internal Model)**
     在 HIM 的 Policy 观测量基础上，PIM 的 Policy 观测器引入了外部感知，即视觉（高程图）编码器，构建了一个**多模态的内部模型**。PIM 利用雷达扫描信息来**修正和增强**对环境状态的估计（即构建包含环境信息的内部表征），从而让机器人能够**主动规划落点**以应对盲视无法处理的**剧烈地形变化**（如陡峭楼梯或断崖）。
-    
-    <img src="images/SDM5008 Report/Structure_pim.png" alt="Structure_pim" style="zoom:68%;" />
-
+  
+  <img src="images/SDM5008 Report/Structure_pim.png" alt="Structure_pim" style="zoom:58%;" />
   - Actor：Policy 观测中新增 perceptive 观测，同时接收本体与环境感知信息，使 Actor 能够在决策阶段显式利用地形几何结构；
   - Critic：拥有 perceptive 观测以及其他特权信息；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
@@ -478,6 +476,12 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 3.3 实验结果展示 (Experimental Results)
 
+<div style="display:fix; gap:10px; justify-content:center;">
+  <img src="images/Screenshot_flat_ground_velocity_tracking1.png" style="zoom:60%;">
+  <img src="images/Screenshot_flat_ground_velocity_tracking2.png" style="zoom:60%;">
+  <img src="images/Screenshot_flat_ground_velocity_tracking3.png" style="zoom:60%;">
+</div>
+
 使用上述配置训练3000轮后的表现如下。
 
 #### 3.3.1 速度响应曲线 (Velocity Response)
@@ -516,7 +520,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 **图 3：基座姿态角 (Roll & Pitch) 随时间变化**
 
-<img src="images/flat_3_oscillation-1767692293944-1.png" alt="flat_3_oscillation" style="zoom:23%;" />
+<img src="images/flat_3_oscillation.png" alt="flat_3_oscillation" style="zoom:23%;" />
 
 **数据分析：**
 
@@ -595,6 +599,12 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 4.4 结果与分析 (Results & Analysis)
 
+<div style="display:fix; gap:10px; justify-content:center;">
+  <img src="images/Screenshot_flat_ground_disturbance_rejection1.png" style="zoom:56%;">
+  <img src="images/Screenshot_him_disturbance_rejection2.png" style="zoom:56%;">
+  <img src="images/Screenshot_pim_disturbance_rejection3.png" style="zoom:56%;">
+</div>
+
 **图4：步态相位差及机器人所受外力随时间变化曲线：**
 
 <img src="images/SDM5008 Report/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:26%;" />
@@ -664,7 +674,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
   - **坡道地形 (Slopes)**
     包含正坡与负坡，主要测试机器人对重力分量变化的补偿能力。
   - **障碍物地形 (Obstacles)**
-
+    地形中分布有离散的几何障碍（凸起或凹陷），其高度和间距在一定范围内随机采样，用于测试机器人足端落点选择能力与避障稳定性。
   - **随机起伏地形 (Rough Terrain)**
     地形高度在给定范围内随机扰动，用于模拟自然环境中的不规则地面。
 
@@ -694,12 +704,30 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 5.4 结果与分析 (Results & Analysis)
 
-- **HIM 台阶地形下速度跟随：**
+- **HIM 复杂地形下速度跟随：**
+  <div style="display:fix; gap:10px; justify-content:center;">
+    <img src="images/Screenshot_him_downstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_him_upstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_him_slopes.png" style="zoom:37%;">
+    <img src="images/Screenshot_him_obstacles.png" style="zoom:56%;">
+    <img src="images/Screenshot_him_rough.png" style="zoom:56%;">
+  </div>
 
+  以台阶地形下数据为例：
   <img src="images/him_downstairs_1_velocity_tracking.png" alt="him_downstairs_1_velocity_tracking" style="zoom:24%;" />
 
-- **PIM 台阶地形下速度跟随：**
+- **PIM 复杂地形下速度跟随：**
 
+  <div style="display:fix; gap:10px; justify-content:center;">
+    <img src="images/Screenshot_pim_downstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_upstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_slopes.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_obstacles.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_rough.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_edge.png" style="zoom:37%;">
+  </div>
+
+  以台阶地形下数据为例：
   <img src="images/pim_stairs_1_velocity_tracking.png" alt="pim_stairs_1_velocity_tracking" style="zoom:24%;" />
 
 **数据分析：**
@@ -763,7 +791,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
   https://github.com/DongyangLin/SDM5008Project.git
 
 - 演示视频 / GIF：
-  https://your-video-link
+  Gif 见项目 [README.md](../README.md) ，完整演示视频见 Blackboard。
 
 ### 6.2 项目使用
 

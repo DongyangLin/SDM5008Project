@@ -185,7 +185,7 @@ class OnPolicyRunner:
         )
 
         # 切换到训练模式 / Switch to train mode
-        self.alg.actor_critic.train()  # switch to train mode (for dropout for example)
+        self.alg.actor_critic.train()
 
         # 训练统计 / Training statistics
         ep_infos = []
@@ -304,7 +304,7 @@ class OnPolicyRunner:
             for key in locs["ep_infos"][0]:
                 infotensor = torch.tensor([], device=self.device)
                 for ep_info in locs["ep_infos"]:
-                    # handle scalar and zero dimensional tensor infos
+                    # 处理标量和零维张量信息 / Handle scalar and zero dimensional tensor infos
                     if not isinstance(ep_info[key], torch.Tensor):
                         ep_info[key] = torch.Tensor([ep_info[key]])
                     if len(ep_info[key].shape) == 0:

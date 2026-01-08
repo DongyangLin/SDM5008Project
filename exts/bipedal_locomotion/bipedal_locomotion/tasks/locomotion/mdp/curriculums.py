@@ -77,6 +77,10 @@ def lin_vel_cmd_levels(
     reward_term_name: str = "rew_lin_vel_xy",
     delta_vel: float = 0.1
 ) -> torch.Tensor:
+    """
+    基于线速度命令范围的课程。/ Curriculum based on linear velocity command range.
+    """
+    # 提取命令项和奖励项 / Extract command term and reward term
     command_term = env.command_manager.get_term("base_velocity")
     ranges = command_term.cfg.ranges
     limit_ranges = command_term.cfg.limit_ranges
@@ -84,6 +88,7 @@ def lin_vel_cmd_levels(
     reward_term = env.reward_manager.get_term_cfg(reward_term_name)
     reward = torch.mean(env.reward_manager._episode_sums[reward_term_name][env_ids]) / env.max_episode_length_s
 
+    # 每个回合结束时检查升级条件 / Check upgrade conditions at the end of each episode
     if env.common_step_counter % env.max_episode_length == 0:
         if reward > reward_term.weight * 0.70:
             delta_command = torch.tensor([-delta_vel, delta_vel], device=env.device)
@@ -107,33 +112,32 @@ def terrain_levels_vel_constrained(
     reward_term_name: str = "rew_lin_vel_xy"
 ) -> torch.Tensor:
     """
-    基于行走距离和个体速度跟踪精度的地形课程。
+    基于行走距离和个体速度跟踪精度的地形课程。/ Terrain curriculum based on walking distance and individual velocity tracking accuracy.
     """
-    # 提取对象
+
+    # 提取对象 / Extract objects
     asset: Articulation = env.scene[asset_cfg.name]
     terrain: TerrainImporter = env.scene.terrain
     command = env.command_manager.get_command("base_velocity")
     
-    # 1. 计算行走距离 (个体指标)
+    # 计算行走距离 (个体指标) / Calculate walking distance (individual metric)
     distance = torch.norm(asset.data.root_pos_w[env_ids, :2] - env.scene.env_origins[env_ids, :2], dim=1)
     
-    # 2. 原始升级条件：距离达标 (Tensor boolean)
+    # 原始升级条件：走出当前地形 1/2 / Original upgrade condition: walk out of the current terrain by half
     move_up = distance > terrain.cfg.terrain_generator.size[0] / 2
     
-    # 3. [修改] 速度奖励约束 (个体级判断)
+    # 额外升级条件：速度跟踪精度 / Additional upgrade condition: velocity tracking accuracy
     try:
+        # 获取奖励项配置 / Get reward term configuration
         reward_term = env.reward_manager.get_term_cfg(reward_term_name)
+
+        # 计算个体平均奖励 / Calculate per-environment average reward
+        per_env_reward = env.reward_manager._episode_sums[reward_term_name][env_ids] / env.max_episode_length_s  # 形状: (len(env_ids), ) / Shape: (len(env_ids), )
         
-        # [修改] 获取每个环境单独的奖励密度 (Tensor)
-        # 形状: (len(env_ids), )
-        per_env_reward = env.reward_manager._episode_sums[reward_term_name][env_ids] / env.max_episode_length_s
-        
-        # [修改] 个体判定标准：每个机器人自己跟自己比
-        # 生成形状相同的布尔 Tensor
+        # 速度跟踪通过条件 / Velocity tracking pass condition
         tracking_pass = per_env_reward > (reward_term.weight * 0.70)
         
-        # [修改] 组合条件：逐元素逻辑与 (Element-wise AND)
-        # 只有距离够远(&)且跟踪够好(&)的那个机器人，它的 move_up 才为 True
+        # 合并升级条件 / Combine upgrade conditions
         move_up = move_up & tracking_pass
             
     except KeyError:
@@ -141,15 +145,15 @@ def terrain_levels_vel_constrained(
     except Exception as e:
         print(f"[Error] terrain_levels: {e}")
 
-    # 4. 降级条件 (个体指标)
+    # 降级条件：行走距离未达标 1/4 / Downgrade condition: walking distance not met by one quarter
     target_dist = torch.norm(command[env_ids, :2], dim=1) * env.max_episode_length_s
     move_down = distance < target_dist * 0.5
     
-    # 互斥处理
+    # 互斥处理 / Mutual exclusion handling
     move_down *= ~move_up
     
-    # 5. 执行更新
+    # 执行更新 / Perform update
     terrain.update_env_origins(env_ids, move_up, move_down)
     
-    # 返回平均地形等级
+    # 返回平均地形等级 / Return average terrain level
     return torch.mean(terrain.terrain_levels.float())

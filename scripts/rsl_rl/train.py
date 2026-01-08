@@ -6,14 +6,14 @@ import argparse
 import sys
 # import os
 
-# # 把项目根目录加入 sys.path
+# 把项目根目录加入 sys.path / Add project root directory to sys.path
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 
 from isaaclab.app import AppLauncher
 
-# local imports
-import cli_args  # isort: skip
+# 本地导入 / Local imports
+import cli_args     # isort: skip
 
 # 添加argparse参数 / Add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
@@ -27,21 +27,21 @@ parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--checkpoint_path", type=str, default=None, help="Relative path to checkpoint file.")
 
-# append RSL-RL cli arguments
+# 添加 RSL-RL cli参数 / Append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 
-# append AppLauncher cli args
+# 添加 AppLauncher cli参数 / Append AppLauncher cli arguments
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 
-# always enable cameras to record video
+# 始终启用摄像头以录制视频 / Always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
 
-# clear out sys.argv for Hydra
+# 清除 sys.argv 以供 Hydra 使用 / Clear out sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
 
-# launch omniverse app
+# 加载 omniverse 应用 / Load omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
@@ -107,7 +107,7 @@ def main():
     # 创建isaac环境 / Create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
-    # wrap for video recording
+    # 为视频录制包装环境 / Wrap for video recording
     if args_cli.video:
         video_kwargs = {
             "video_folder": os.path.join(log_dir, "videos"),
@@ -138,12 +138,14 @@ def main():
 
     # 在创建新的log_dir之前保存恢复路径 / Save resume path before creating a new log_dir
     if agent_cfg.resume:
+        
         # 获取先前检查点的路径 / Get path to previous checkpoint
         if args_cli.checkpoint_path is not None:
             resume_path = args_cli.checkpoint_path
         else:
             resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
+
         # 加载先前训练的模型 / Load previously trained model
         runner.load(resume_path)
 
@@ -156,15 +158,15 @@ def main():
     # dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
     # dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
 
-    # run training
+    # 运行训练 / Run training
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
 
-    # close the simulator
+    # 关闭模拟器 / Close the simulator
     env.close()
 
 
 if __name__ == "__main__":
-    # run the main execution
+    # 运行主执行 / Run the main execution
     main()
-    # close sim app
+    # 关闭模拟器应用 / Close sim app
     simulation_app.close()

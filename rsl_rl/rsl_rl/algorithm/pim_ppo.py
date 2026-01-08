@@ -69,7 +69,7 @@ class PIMPPO:
         # PPO components
         self.actor_critic = actor_critic   # PIMActorCritic
         self.actor_critic.to(self.device)
-        self.storage = None   # initialized later
+        self.storage = None         # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = PIMRolloutStorage.Transition()
 
@@ -102,7 +102,7 @@ class PIMPPO:
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
-        # need to record obs and critic_obs before env.step()
+        # Record obs and critic_obs before env.step()
         self.transition.observations = obs.clone()
         self.transition.perceptive_observations = perceptive_obs.clone()   ####
         self.transition.critic_observations = critic_obs.clone()
