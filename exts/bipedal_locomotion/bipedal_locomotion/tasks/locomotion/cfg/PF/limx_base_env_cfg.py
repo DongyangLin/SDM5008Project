@@ -22,6 +22,7 @@ from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import Co
 
 from bipedal_locomotion.tasks.locomotion import mdp
 
+
 ##################
 # 场景定义 / Scene Definition
 ##################
@@ -52,8 +53,8 @@ class PFSceneCfg(InteractiveSceneCfg):
         visual_material=MdlFileCfg(
             mdl_path=f"{ISAACLAB_NUCLEUS_DIR}/Materials/TilesMarbleSpiderWhiteBrickBondHoned/"
             + "TilesMarbleSpiderWhiteBrickBondHoned.mdl",  # 大理石纹理材质路径 / Marble texture material path
-            project_uvw=True,              # 启用UV投影 / Enable UV projection
-            texture_scale=(0.25, 0.25),    # 纹理缩放比例 / Texture scaling factor
+            project_uvw=True,                # 启用UV投影 / Enable UV projection
+            texture_scale=(0.25, 0.25),      # 纹理缩放比例 / Texture scaling factor
         ),
         debug_vis=False,   # 不显示调试可视化 / Don't show debug visualization
     )
@@ -68,7 +69,7 @@ class PFSceneCfg(InteractiveSceneCfg):
         ),
     )
 
-    # pointfoot robot
+    # 机器人配置 (将在子类中定义) / Robot articulation (to be defined in subclasses)
     robot: ArticulationCfg = MISSING
 
     # 高度扫描传感器 (将在子类中定义) / Height scanner sensor (to be defined in subclasses)
@@ -84,7 +85,7 @@ class PFSceneCfg(InteractiveSceneCfg):
 
 
 ##############
-# MDP设置 / MDP Settings
+# MDP 设置 / MDP Settings
 ##############
 
 
@@ -126,12 +127,11 @@ class ActionsCfg:
 
     # 关节位置动作配置 / Joint position action configuration
     joint_pos = mdp.JointPositionActionCfg(
-        asset_name="robot",                  # 目标资产名称 / Target asset name
-        # 控制的关节名称列表 / List of controlled joint names
-        joint_names=["abad_L_Joint", "abad_R_Joint", "hip_L_Joint", 
-                    "hip_R_Joint", "knee_L_Joint", "knee_R_Joint"],
-        scale=0.25,              # 动作缩放因子 / Action scaling factor
-        use_default_offset=True, # 使用默认偏移量 / Use default offset
+        asset_name="robot",                   # 目标资产名称 / Target asset name
+        joint_names=["abad_L_Joint", "abad_R_Joint", "hip_L_Joint",  # 控制的关节名称列表 / List of controlled joint names
+                    "hip_R_Joint", "knee_L_Joint", "knee_R_Joint"], 
+        scale=0.25,                           # 动作缩放因子 / Action scaling factor
+        use_default_offset=True,              # 使用默认偏移量 / Use default offset
     )
 
 
@@ -146,7 +146,7 @@ class ObservarionsCfg:
         # 机器人基座测量 / Robot base measurements
         base_ang_vel = ObsTerm(
             func=mdp.base_ang_vel,              # 基座角速度函数 / Base angular velocity function
-            noise=GaussianNoise(mean=0.0, std=0.05),  # 高斯噪声 / Gaussian noise
+            noise=GaussianNoise(mean=0.0, std=0.05),  # 噪声配置 / Noise configuration
             clip=(-100.0, 100.0),               # 数值裁剪范围 / Value clipping range
             scale=0.25,                         # 缩放因子 / Scaling factor
         )
@@ -159,7 +159,7 @@ class ObservarionsCfg:
 
         # 机器人关节测量 / Robot joint measurements
         joint_pos = ObsTerm(
-            func=mdp.joint_pos_rel,            # 关节位置函数 / Joint position function
+            func=mdp.joint_pos_rel,             # 关节位置函数 / Joint position function
             noise=GaussianNoise(mean=0.0, std=0.01),  # 噪声配置 / Noise configuration
             clip=(-100.0, 100.0),               # 裁剪范围 / Clipping range
             scale=1.0,                          # 缩放因子 / Scaling factor
@@ -189,26 +189,26 @@ class ObservarionsCfg:
     class HistoryObsCfg(ObsGroup):
         """历史观测组配置 - 用于存储观测历史 / History observation group - for storing observation history"""
 
-        # robot base measurements
+        # 机器人基座测量 / Robot base measurements
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=GaussianNoise(mean=0.0, std=0.05),clip=(-100.0, 100.0),scale=0.25,)
         proj_gravity = ObsTerm(func=mdp.projected_gravity, noise=GaussianNoise(mean=0.0, std=0.025),clip=(-100.0, 100.0),scale=1.0,)
 
-        # robot joint measurements
+        # 机器人关节测量 / Robot joint measurements
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=GaussianNoise(mean=0.0, std=0.01),clip=(-100.0, 100.0),scale=1.0,)
         joint_vel = ObsTerm(func=mdp.joint_vel, noise=GaussianNoise(mean=0.0, std=0.01),clip=(-100.0, 100.0),scale=0.05,)
 
-        # last action
+        # 上一步动作 / Last action
         last_action = ObsTerm(func=mdp.last_action)
 
-        # gaits
+        # 步态相关观测 / Gait-related observations
         gait_phase = ObsTerm(func=mdp.get_gait_phase)
         gait_command = ObsTerm(func=mdp.get_gait_command, params={"command_name": "gait_command"})
         
         def __post_init__(self):
             self.enable_corruption = True
             self.concatenate_terms = True
-            self.history_length = 10          # 历史长度为10步 / History length of 10 steps
-            self.flatten_history_dim = False  # 不展平历史维度 / Don't flatten history dimension
+            self.history_length = 10           # 历史长度为10步 / History length of 10 steps
+            self.flatten_history_dim = False   # 不展平历史维度 / Don't flatten history dimension
 
     @configclass
     class CriticCfg(ObsGroup):
@@ -259,6 +259,7 @@ class ObservarionsCfg:
             params={"command_name": "base_velocity"}  # 速度命令 / Velocity commands
         )
     
+    # 观测组实例化 / Observation group instantiation
     policy: PolicyCfg = PolicyCfg()
     critic: CriticCfg = CriticCfg()
     commands: CommandsObsCfg = CommandsObsCfg()
@@ -267,8 +268,7 @@ class ObservarionsCfg:
 
 @configclass
 class EventsCfg:
-    """事件配置类 - 定义训练过程中的随机化事件 / Events configuration class - defines randomization events during training"""
-    # 即域随机化 / i.e. domain randomization
+    """事件配置类 - 定义训练过程中的域随机化事件 / Events configuration class - defines domain randomization events during training"""
 
     # 启动时事件 / Startup events
     add_base_mass = EventTerm(
@@ -283,6 +283,7 @@ class EventsCfg:
         min_step_count_between_reset=0,         # 重置间最小步数 / Min steps between resets
     )
 
+    # 随机化连杆质量事件 / Randomize link mass event
     add_link_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,     # 随机化连杆质量 / Randomize link mass
         mode="startup",
@@ -295,6 +296,7 @@ class EventsCfg:
         min_step_count_between_reset=0,
     )
     
+    # 质量和惯量随机化事件 / Mass and inertia randomization event
     radomize_rigid_body_mass_inertia = EventTerm(
         func=mdp.randomize_rigid_body_mass_inertia,  # 随机化质量和惯量 / Randomize mass and inertia
         mode="startup",
@@ -304,7 +306,8 @@ class EventsCfg:
             "operation": "scale",
         },
     )
-    
+
+    # 物理材质随机化事件 / Physics material randomization event    
     robot_physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,     # 随机化物理材质 / Randomize physics material
         mode="startup",
@@ -319,6 +322,7 @@ class EventsCfg:
         min_step_count_between_reset=0,
     )
 
+    # 关节刚度和阻尼随机化事件 / Joint stiffness and damping randomization event
     robot_joint_stiffness_and_damping = EventTerm(
         func=mdp.randomize_actuator_gains,          # 随机化执行器增益 / Randomize actuator gains
         mode="startup",
@@ -333,13 +337,13 @@ class EventsCfg:
         min_step_count_between_reset=0,
     )
 
+    # 重心随机化事件 / Center of mass randomization event
     robot_center_of_mass = EventTerm(
         func=mdp.randomize_rigid_body_coms,         # 随机化重心位置 / Randomize center of mass
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot"),
-            # 重心偏移范围 (x, y, z) [m] / Center of mass offset range (x, y, z) [m]
-            "com_distribution_params": ((-0.075, 0.075), (-0.05, 0.06), (-0.05, 0.05)),
+            "com_distribution_params": ((-0.075, 0.075), (-0.05, 0.06), (-0.05, 0.05)),  # 重心偏移范围 (x, y, z) [m] / Center of mass offset range (x, y, z) [m]
             "operation": "add",
             "distribution": "uniform",
         },
@@ -349,12 +353,10 @@ class EventsCfg:
     reset_robot_base = EventTerm(
         func=mdp.reset_root_state_uniform,          # 均匀重置根状态 / Uniform reset root state
         mode="reset",                               # 重置模式 / Reset mode
-        params={
-            # 姿态范围 / Pose range
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
-            # 速度范围 / Velocity range
+        params={        
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},  # 姿态范围 / Pose range
             "velocity_range": {
-                "x": (-0.5, 0.5), "y": (-0.5, 0.5), "z": (-0.5, 0.5),
+                "x": (-0.5, 0.5), "y": (-0.5, 0.5), "z": (-0.5, 0.5),                  # 速度范围 / Velocity range
                 "roll": (-0.5, 0.5), "pitch": (-0.5, 0.5), "yaw": (-0.5, 0.5),
             },
         },
@@ -362,12 +364,13 @@ class EventsCfg:
         min_step_count_between_reset=0,
     )
 
+    # 关节重置事件 / Joint reset event
     reset_robot_joints = EventTerm(
         func=mdp.reset_joints_by_scale,             # 按比例重置关节 / Reset joints by scale
         mode="reset",
         params={
-            "position_range": (-0.5, 0.5),         # 位置扰动范围 / Position perturbation range
-            "velocity_range": (0.0, 0.0),          # 速度范围 (重置为0) / Velocity range (reset to 0)
+            "position_range": (-0.5, 0.5),          # 位置扰动范围 / Position perturbation range
+            "velocity_range": (0.0, 0.0),           # 速度范围 (重置为0) / Velocity range (reset to 0)
         },
         is_global_time=False,
         min_step_count_between_reset=0,
@@ -377,16 +380,12 @@ class EventsCfg:
     push_robot = EventTerm(
         func=mdp.apply_external_force_torque_stochastic,  # 随机外力扰动 / Stochastic external force disturbance
         mode="interval",                            # 间隔模式 / Interval mode
-        interval_range_s=(0.2, 0.2),               # 间隔时间范围 / Interval time range
+        interval_range_s=(0.2, 0.2),                # 间隔时间范围 / Interval time range
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base_Link"),
-            # 力的范围 [N] / Force range [N]
-            "force_range": {
-                "x": (-50.0, 50.0), "y": (-50.0, 50.0), "z": (-0.0, 0.0),
-            },
-            # 力矩范围 [N⋅m] / Torque range [N⋅m]
-            "torque_range": {"x": (-5.0, 5.0), "y": (-5.0, 5.0), "z": (-0.0, 0.0)},
-            "probability": 0.3,                   # 发生概率 / Occurrence probability
+            "force_range": {"x": (-50.0, 50.0), "y": (-50.0, 50.0), "z": (-0.0, 0.0)},   # 力的范围 [N] / Force range [N]
+            "torque_range": {"x": (-5.0, 5.0), "y": (-5.0, 5.0), "z": (-0.0, 0.0)},      # 力矩范围 [N⋅m] / Torque range [N⋅m]
+            "probability": 0.3,                     # 发生概率 / Occurrence probability
         },
         is_global_time=False,
         min_step_count_between_reset=0,
@@ -403,7 +402,7 @@ class RewardsCfg:
         weight=1.0              # 奖励权重 / Reward weight
     )
 
-    # tracking related rewards
+    # 速度跟踪奖励 / Velocity tracking rewards
     rew_lin_vel_xy = RewTerm(
         func=mdp.track_lin_vel_xy_exp, weight=3.0, params={"command_name": "base_velocity", "std": math.sqrt(0.2)}
     )
@@ -411,10 +410,10 @@ class RewardsCfg:
         func=mdp.track_ang_vel_z_exp, weight=1.5, params={"command_name": "base_velocity", "std": math.sqrt(0.2)}
     )
 
-    # 调节相关奖励 / Regulation-related rewards
+    # 基座高度惩罚 / Base height penalty
     pen_base_height = RewTerm(
         func=mdp.base_com_height,                   # 基座高度惩罚 / Base height penalty
-        params={"target_height": 0.68},            # 目标高度 68 / Target height 78cm
+        params={"target_height": 0.68},             # 目标高度 68cm / Target height 68cm
         weight=-20.0,                               # 负权重表示惩罚 / Negative weight indicates penalty
     )
     
@@ -428,6 +427,7 @@ class RewardsCfg:
     pen_joint_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-1e-03)
     pen_joint_powers = RewTerm(func=mdp.joint_powers_l1, weight=-5e-04)
     
+    # 足部和接触相关惩罚 / Foot and contact-related penalties
     pen_undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,                # 不期望接触惩罚 / Undesired contacts penalty
         weight=-0.5,
@@ -438,23 +438,29 @@ class RewardsCfg:
         },
     )
 
+    # 动作平滑性惩罚 / Action smoothness penalty
     pen_action_smoothness = RewTerm(
         func=mdp.ActionSmoothnessPenalty,           # 动作平滑性惩罚 / Action smoothness penalty
         weight=-0.04
     )
+
+    # 平坦朝向惩罚 / Flat orientation penalty
     pen_flat_orientation = RewTerm(
         func=mdp.flat_orientation_l2,               # 平坦朝向L2惩罚 / Flat orientation L2 penalty
         weight=-10.0
     )
+
+    # 足部距离惩罚 / Foot distance penalty
     pen_feet_distance = RewTerm(
         func=mdp.feet_distance,                     # 足部距离惩罚 / Foot distance penalty
         weight=-10,
         params={
-            "min_feet_distance": 0.12,            # 最小足部距离 / Minimum foot distance
+            "min_feet_distance": 0.12,             # 最小足部距离 / Minimum foot distance
             "feet_links_name": ["foot_[RL]_Link"]  # 足部连杆名称 / Foot link names
         }
     )
     
+    # 足部调节惩罚 / Foot regulation penalty
     pen_feet_regulation = RewTerm(
         func=mdp.feet_regulation,                   # 足部调节惩罚 / Foot regulation penalty
         weight=-0.1,
@@ -465,6 +471,7 @@ class RewardsCfg:
         },
     )
 
+    # 足部着陆速度惩罚 / Foot landing velocity penalty
     foot_landing_vel = RewTerm(
         func=mdp.foot_landing_vel,                  # 足部着陆速度惩罚 / Foot landing velocity penalty
         weight=-0.5,
@@ -475,7 +482,6 @@ class RewardsCfg:
             "about_landing_threshold": 0.08         # 即将着陆阈值 / About to land threshold
         },
     )
-    
     
     # 步态奖励 / Gait reward
     test_gait_reward = RewTerm(
@@ -530,10 +536,12 @@ class PFEnvCfg(ManagerBasedRLEnvCfg):
 
     # 场景设置 / Scene settings
     scene: PFSceneCfg = PFSceneCfg(num_envs=4096, env_spacing=2.5)
+
     # 基本设置 / Basic settings
     observations: ObservarionsCfg = ObservarionsCfg()
     actions: ActionsCfg = ActionsCfg()
     commands: CommandCfg = CommandCfg()
+
     # MDP设置 / MDP settings
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
@@ -543,7 +551,7 @@ class PFEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """后初始化配置 / Post-initialization configuration"""
         self.decimation = 4                         # 控制频率降采样 (50Hz -> 12.5Hz) / Control frequency downsampling
-        self.episode_length_s = 20.0               # 每个episode长度20秒 / Episode length 20 seconds
+        self.episode_length_s = 20.0                # 每个episode长度20秒 / Episode length 20 seconds
         self.sim.render_interval = 2 * self.decimation  # 渲染间隔 / Rendering interval
         
         # 仿真设置 / Simulation settings
@@ -556,5 +564,5 @@ class PFEnvCfg(ManagerBasedRLEnvCfg):
             self.scene.height_scanner.update_period = self.decimation * self.sim.dt
         if self.scene.contact_forces is not None:
             self.scene.contact_forces.update_period = self.sim.dt
-            
+        
         self.push_maker=None

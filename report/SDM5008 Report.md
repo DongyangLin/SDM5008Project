@@ -353,21 +353,21 @@ Encoder-MLP 直接在纯本体感知条件下进行策略学习，完全依赖�
 
 1. **Encoder-MLP**
   Encoder-MLP 是最基础的盲视策略，依赖本体感知信息估计机器人基座线速度。机器人没有外部感知能力，仅靠本体感知（IMU、关节）行走。
-  <img src="images/Structure_encoder_mlp.png" alt="Structure_encoder_mlp" style="zoom:61%;" />
+  <img src="images/structure_encoder_mlp.png" alt="structure_encoder_mlp" style="zoom:61%;" />
   - 可观测信息：关节位置 / 速度、IMU 信息（姿态、角速度）、速度指令等本体感知量。
   - 缺失信息：无任何显式环境感知（如地形高度、台阶结构）。
   - 主要能力：平地或弱起伏地形；地形变化缓慢、可由动力学反馈“滞后补偿”的场景。
 
 2. **HIM (Hybrid Internal Model)** 
   HIM 训练一个基于本体感知历史的**内部模型 (Internal Model/Estimator)**，通过**对比学习**显式地**预测**隐式特权信息，使得 Policy 不仅仅是被 Critic “指导”，而是自身具备了从本体感知中**推理**环境和自身状态的能力。
-  <img src="images/Structure_him.png" alt="Structure_him" style="zoom:70%;" />
+  <img src="images/structure_him.png" alt="structure_him" style="zoom:70%;" />
   - Actor：仍然是盲视的，不直接接收地形高度信息；
   - Critic：拥有特权信息（如地形高度扫描），从而提供更准确的价值估计；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
 
 3. **PIM (Perceptive Internal Model)**
   在 HIM 的 Policy 观测量基础上，PIM 的 Policy 观测器引入了外部感知，即视觉（高程图）编码器，构建了一个**多模态的内部模型**。PIM 利用雷达扫描信息来**修正和增强**对环境状态的估计（即构建包含环境信息的内部表征），从而让机器人能够**主动规划落点**以应对盲视无法处理的**剧烈地形变化**（如陡峭楼梯或断崖）。
-  <img src="images/Structure_pim.png" alt="Structure_pim" style="zoom:58%;" />
+  <img src="images/structure_pim.png" alt="structure_pim" style="zoom:58%;" />
   - Actor：Policy 观测中新增 perceptive 观测，同时接收本体与环境感知信息，使 Actor 能够在决策阶段显式利用地形几何结构；
   - Critic：拥有 perceptive 观测以及其他特权信息；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
@@ -512,7 +512,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 **图 3：基座姿态角 (Roll & Pitch) 随时间变化**
 
-<img src="images/flat_3_oscillation-1767692293944-1.png" alt="flat_3_oscillation" style="zoom:23%;" />
+<img src="images/flat_3_oscillation.png" alt="flat_3_oscillation" style="zoom:23%;" />
 
 **数据分析：**
 
@@ -624,7 +624,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
   - **坡道地形 (Slopes)**
     包含正坡与负坡，主要测试机器人对重力分量变化的补偿能力。
   - **障碍物地形 (Obstacles)**
-
+    地形中分布有离散的几何障碍（凸起或凹陷），其高度和间距在一定范围内随机采样，用于测试机器人足端落点选择能力与避障稳定性。
   - **随机起伏地形 (Rough Terrain)**
     地形高度在给定范围内随机扰动，用于模拟自然环境中的不规则地面。
 
@@ -674,7 +674,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
   https://github.com/DongyangLin/SDM5008Project.git
 
 - 演示视频 / GIF：
-  https://your-video-link
+  Gif 见项目 [README.md](../README.md) ，完整演示视频见 Blackboard。
 
 ### 6.2 项目使用
 

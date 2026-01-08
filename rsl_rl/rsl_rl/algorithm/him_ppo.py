@@ -66,7 +66,7 @@ class HIMPPO:
         # PPO components
         self.actor_critic = actor_critic   # HIMActorCritic
         self.actor_critic.to(self.device)
-        self.storage = None   # initialized later
+        self.storage = None       # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = HIMRolloutStorage.Transition()
 
@@ -90,14 +90,19 @@ class HIMPPO:
     def train_mode(self):
         self.actor_critic.train()
 
-    def act(self, obs, critic_obs):  # obs: history observations, critic_obs: current observation
+    def act(self, obs, critic_obs):  
+        """
+        obs: history observations, 
+        critic_obs: current observation
+        """
         # Compute the actions and values
         self.transition.actions = self.actor_critic.act(obs).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
-        # need to record obs and critic_obs before env.step()
+        
+        # Record obs and critic_obs before env.step()
         self.transition.observations = obs
         self.transition.critic_observations = critic_obs
         return self.transition.actions
@@ -106,6 +111,7 @@ class HIMPPO:
         self.transition.next_critic_observations = next_critic_obs.clone()
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
+
         # Bootstrapping on time outs
         if 'time_outs' in infos:
             self.transition.rewards += self.gamma * torch.squeeze(self.transition.values * infos['time_outs'].unsqueeze(1).to(self.device), 1)

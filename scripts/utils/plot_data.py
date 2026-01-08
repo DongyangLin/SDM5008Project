@@ -91,7 +91,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
         os.makedirs(save_dir)
 
     print(f"Reading file: {file_path}")
-    # 读取数据 / Read data：取前3000行以避免过大文件
+    # 读取数据 / Read data：取前3000行以避免过大文件 / read first 3000 rows to avoid large files
     data = pd.read_csv(file_path, nrows=3001)
 
     # =========================================================
@@ -123,7 +123,7 @@ def analyze_robot_data(file_path, smoothing=0.8):
                 label=label,
             )
         else:
-            # 不平滑：只画一条线
+            # 不平滑：只画一条线 / no smoothing: single line
             ax.plot(
                 x, y, color=color, linestyle="-", linewidth=1.5, alpha=0.9, label=label
             )
@@ -204,15 +204,15 @@ def analyze_robot_data(file_path, smoothing=0.8):
     err_vy = data["cmd_vy"] - data["act_vy"]
     err_wz = data["cmd_wz"] - data["act_wz"]
 
-    # 2. 计算 MSE
+    # 2. 计算 MSE / compute MSE
     mse_vx = np.mean(err_vx**2)
     mse_vy = np.mean(err_vy**2)
     mse_wz = np.mean(err_wz**2)
-
-    # 3. 绘图
+ 
+    # 3. 绘图 / plotting
     fig2, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8, 10))
 
-    # 直方图通用参数
+    # 直方图通用参数 / common histogram params
     hist_params = dict(
         bins=50, alpha=0.7, edgecolor="white", linewidth=0.5, density=False
     )

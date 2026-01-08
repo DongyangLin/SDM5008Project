@@ -10,43 +10,44 @@ from collections import defaultdict
 class DataRecorder:
     def __init__(self, log_dir, args_cli, lin_vel_start=0, ang_vel_start=3, g_start=6):
         """
-        初始化数据记录器
+        初始化数据记录器 / Initializes the data recorder.
         """
         self.log_dir = log_dir
         self.args_cli = args_cli
 
-        # 观测空间切片配置
+        # 观测空间切片配置 / Observation space slice config
         self.lin_vel_start = lin_vel_start
         self.ang_vel_start = ang_vel_start
         self.g_start = g_start
 
-        # 内部状态
+        # 内部状态 / Internal state
         self.logs = defaultdict(list)
-        self.t0_wall = time.time()  # 记录器初始化时间作为起始时间
+        self.t0_wall = time.time()  # 记录器初始化时间作为起始时间 / Wall clock start time
 
     def step(self, step_idx, obs_pack, commands, env, experiment_name="Flat"):
         """
         每一步调用此函数来记录数据。会自动判断是否需要保存到磁盘。
+        Records data at each step. Automatically saves to disk periodically.
         """
-        # 1. 提取数据
-        # Commanded velocities
+        # 1. 提取数据 / Extract data
+        # 指令速度 / Commanded velocities
         cmd_triplet = self._extract_cmd_vxvywz(commands)
         cmd_vx, cmd_vy, cmd_wz = (
             cmd_triplet if cmd_triplet is not None else (None, None, None)
         )
 
-        # Actual velocities
+        # 实际速度 / Actual velocities
         act_triplet = self._extract_base_lin_ang_vel(obs_pack)
         act_vx, act_vy, act_wz = (
             act_triplet if act_triplet is not None else (None, None, None)
         )
 
-        # Orientation & Forces
+        # 姿态和力 / Orientation & Forces
         roll, pitch = self._extract_base_quat(obs_pack)
         force_l, force_r = self._extract_feet_contact_forces(env)
         external_force = self._extract_non_foot_contact_forces(env)
 
-        # 2. 存入内存 logs
+        # 2. 存入日志 / Store in logs
         self.logs["step"].append(step_idx)
         self.logs["wall_time_s"].append(float(time.time() - self.t0_wall))
 
@@ -66,12 +67,12 @@ class DataRecorder:
         self.logs["contact_force_R"].append(self._mean_or_nan(force_r))
         self.logs["external_force"].append(self._mean_or_nan(external_force))
 
-        # 3. 定期保存 (每500步)
+        # 3. 定期保存 (每500步) / Periodic save (every 500 steps)
         if step_idx % 500 == 0:
             self.save_to_disk(experiment_name)
 
     def save_to_disk(self, experiment_name):
-        """显式保存数据到磁盘 (NPZ 和 CSV)"""
+        """显式保存数据到磁盘 (NPZ 和 CSV) / Explicitly save data to disk (NPZ and CSV)"""
         save_dir = os.path.join(self.log_dir, "play_logs")
         os.makedirs(save_dir, exist_ok=True)
 
@@ -81,11 +82,11 @@ class DataRecorder:
             npz_path = os.path.abspath(self.args_cli.save_path)
             os.makedirs(os.path.dirname(npz_path), exist_ok=True)
 
-        # 准备 numpy 数组
+        # 准备 numpy 数组 / Prepare numpy arrays
         out = {}
-        # 确保 step 和 time 存在
+        # 确保 step 和 time 存在 / Ensure step and time exist
         if "step" not in self.logs or not self.logs["step"]:
-            return  # 没数据不保存
+            return  # 没数据不保存 / No data to save
 
         out["step"] = np.asarray(self.logs["step"], dtype=np.int64)
         out["wall_time_s"] = np.asarray(self.logs["wall_time_s"], dtype=np.float64)
@@ -109,11 +110,11 @@ class DataRecorder:
         for k in keys_to_save:
             out[k] = np.asarray(self.logs[k], dtype=np.float32)
 
-        # 保存 NPZ
+        # 保存 NPZ 文件 / Save NPZ file
         np.savez_compressed(npz_path, **out)
         print(f"[INFO] Saved play logs to: {npz_path}")
 
-        # 保存 CSV
+        # 保存 CSV 文件 / Save CSV file
         csv_path = os.path.splitext(npz_path)[0] + ".csv"
         try:
             with open(csv_path, "w", newline="") as f:
@@ -134,7 +135,7 @@ class DataRecorder:
         except Exception as e:
             print(f"[Error] Failed to write CSV: {e}")
 
-    # ================= 内部辅助方法 =================
+    # ================= 内部辅助方法 / Internal helper methods =================
 
     def _to_cpu_np(self, x):
         if x is None:
@@ -229,7 +230,7 @@ class DataRecorder:
             )
             return val_l, val_r
         except Exception as e:
-            # 这里的print在大量循环中可能会刷屏，建议根据需要开启
+            # 这里的print在大量循环中可能会刷屏，建议根据需要开启 / The print here may flood the console in many loops, enable as needed
             # print(f"[Error] Extract forces failed: {e}")
             return np.nan, np.nan
 

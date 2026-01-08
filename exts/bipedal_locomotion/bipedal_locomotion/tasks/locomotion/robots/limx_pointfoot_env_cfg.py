@@ -61,16 +61,15 @@ class PFBaseEnvCfg_PLAY(PFBaseEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        # make a smaller scene for play
+        # 选取一个较小的场景用于测试 / Make a smaller scene for play
         self.scene.num_envs = 32
-        
         self.episode_length_s = 100.0
 
-        # disable randomization for play
+        # 禁用随机化以进行测试 / Disable randomization for play
         self.observations.policy.enable_corruption = True
-        # remove random pushing event
+        # 移除随机推力事件 / Remove random pushing event
         self.events.push_robot = None
-        # remove random base mass addition event
+        # 移除随机基座质量增加事件 / Remove random base mass addition event
         self.events.add_base_mass = None
         
         self.curriculum.lin_vel_cmd_levels=None
@@ -145,7 +144,7 @@ class PFBlindRoughEnvCfg_PLAY(PFBaseEnvCfg_PLAY):
         self.observations.policy.heights = None
         self.observations.critic.heights = None
 
-        # spawn the robot randomly in the grid (instead of their terrain levels)
+        # 随机在网格中生成机器人（而不是根据地形等级）/ Randomly spawn the robot in the grid (instead of their terrain levels)
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.max_init_terrain_level = None
         self.scene.terrain.terrain_generator = BLIND_ROUGH_TERRAINS_PLAY_CFG
@@ -212,6 +211,7 @@ class PFBlindStairEnvCfg_PLAY(PFBaseEnvCfg_PLAY):
         # 设置测试楼梯地形 / Set up testing stairs terrain
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.max_init_terrain_level = None
+
         # 设置中等难度的楼梯测试环境 / Set medium difficulty stairs testing environment
         self.scene.terrain.terrain_generator = STAIRS_TERRAINS_PLAY_CFG.replace(difficulty_range=(0.5, 0.5))
 
@@ -279,13 +279,13 @@ class PFStairEnvCfgv1_PLAY(PFBaseEnvCfg_PLAY):
         )
         self.observations.policy.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, # the defualt height of robot is 0.78m
+                      "offset":0.78},   # 机器人模型的默认高度是0.78米 / the default height of robot is 0.78m
                     noise=GaussianNoise(mean=0.0, std=0.01),
                     clip = (-2.0, 2.0),
         )
         self.observations.critic.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.78}, # the defualt height of robot is 0.78m
+                      "offset":0.78},   # 机器人模型的默认高度是0.78米 / the default height of robot is 0.78m
             clip = (-2.0, 2.0),
         )
         
@@ -295,7 +295,7 @@ class PFStairEnvCfgv1_PLAY(PFBaseEnvCfg_PLAY):
         self.commands.base_velocity.ranges.lin_vel_y = (-0.0, 0.0)     
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0) 
 
-        # spawn the robot randomly in the grid (instead of their terrain levels)
+        # 随机在网格中生成机器人（而不是根据地形等级）/ Randomly spawn the robot in the grid (instead of their terrain levels)
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.max_init_terrain_level = None
         self.scene.terrain.terrain_generator = STAIRS_TERRAINS_PLAY_CFG
@@ -310,8 +310,7 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        # ... (Terrain, Height Scanner, Observations, Commands setup remains the same) ...
-        # 1. 地形与课程设置
+        # 地形与课程设置 / Terrain and curriculum setup
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.terrain_generator = HIM_TERRAINS_CFG
         self.scene.terrain.max_init_terrain_level= self.scene.terrain.terrain_generator.num_rows-1
@@ -339,7 +338,7 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         self.commands.base_velocity.limit_ranges.ang_vel_z = (-0.0, 0.0) # For Phase 2
         # self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6) # Phase 2
 
-        # Close Vel Curriculum, for phase 2
+        # 第 2 阶段关闭速度课程 / Close Vel Curriculum for phase 2
         self.curriculum.lin_vel_cmd_levels = None 
         self.commands.base_velocity.ranges.lin_vel_x = (-0.2, 1.0) # For Phase 2
         self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)     
@@ -347,49 +346,46 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
 
         self.commands.base_velocity.ranges.ang_vel_z = (-0.0, 0.0) # For Phase 2
 
-        # # =========================================================================
-        # # REWARD MODIFICATIONS (Strictly following HIM Table 5)
-        # # =========================================================================
-
-        # 1. Linear velocity tracking
+        # 修改奖励函数 / Reward modifications
+        # 1. 线速度跟踪 / Linear velocity tracking
         # Eq: exp(-|v_cmd - v_xy|^2 / sigma)
         # Weight: 1.0
         # self.rewards.rew_lin_vel_xy.weight = 1.25
         self.rewards.rew_lin_vel_xy.weight = 1.0
         self.rewards.rew_lin_vel_xy.params["std"] = 0.25 # sigma = 0.25
 
-        # 2. Angular velocity tracking
+        # 2. 角速度跟踪 / Angular velocity tracking
         # Eq: exp(-|w_cmd - w_yaw|^2 / sigma)
         # Weight: 0.5
         self.rewards.rew_ang_vel_z.weight = 0.5
         self.rewards.rew_ang_vel_z.params["std"] = 0.25 # sigma = 0.25
 
-        # 3. Linear velocity (z)
+        # 3. 线速度 (z) / Linear velocity (z)
         # Eq: v_z^2
         # Weight: -2.0
         self.rewards.pen_lin_vel_z.weight = -2.0
 
-        # 4. Angular velocity (xy)
+        # 4. 角速度 (xy) / Angular velocity (xy)
         # Eq: |w_xy|^2
         # Weight: -0.05
         self.rewards.pen_ang_vel_xy.weight = -0.05
 
-        # 5. Orientation
+        # 5. 姿态 / Orientation
         # Eq: |g_proj|^2 (approx via flat_orientation_l2)
         # Weight: -0.2
         self.rewards.pen_flat_orientation.weight = -2.0 # Stable pen_flat_orientation weight
 
-        # 6. Joint accelerations
+        # 6. 关节加速度 / Joint accelerations
         # Eq: |theta_ddot|^2
         # Weight: -2.5e-7
         self.rewards.pen_joint_accel.weight = -2.5e-7
 
-        # 7. Joint power
+        # 7. 关节功率 / Joint power
         # Eq: |tau * theta_dot|
         # Weight: -2e-5
         self.rewards.pen_joint_powers.weight = -2e-5
 
-        # 8. Body height
+        # 8. 机器人基座高度 / Body height
         # Eq: (h_target - h)^2
         # Weight: -1.0
         self.rewards.pen_base_height.weight = -1.0
@@ -398,40 +394,38 @@ class PFHIMEnvCfg(PFHIMBaseEnvCfg):
         self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
         self.rewards.pen_base_height.params["target_height"] = 0.68
 
-        # 9. Foot clearance
+        # 9. 抬脚高度 / Foot clearance
         # Eq: sum((p_z_target - p_z)^2 * v_xy)
         # Weight: -0.01
         self.rewards.rew_feet_clearance.weight=0.2 # Stable clearance reward !!!!
 
-        # 10. Action rate
+        # 10. 动作速率 / Action rate
         # Eq: |a_t - a_{t-1}|^2
         # Weight: -0.01
         self.rewards.pen_action_rate.weight = -0.01
 
-        # 11. Smoothness
+        # 11. 平滑度 / Smoothness
         # Eq: |a_t - 2a_{t-1} + a_{t-2}|^2
         # Weight: -0.01
         self.rewards.pen_action_smoothness.weight = -0.01
 
-        # For bipedal robot
-        self.rewards.test_gait_reward.weight = 0.5 # Stable gait penalty !!!
-        self.rewards.pen_feet_distance.weight = -40.0 # Stable feet_distance penalty !!!
-        self.rewards.keep_balance.weight = 0.3 # Stable weight
+        # 双足机器人特有奖励 / Bipedal-specific rewards
+        self.rewards.test_gait_reward.weight = 0.5     # 稳定步态惩罚 / Stable gait penalty !!!
+        self.rewards.pen_feet_distance.weight = -40.0    # 稳定足距惩罚 / Stable feet_distance penalty !!!
+        self.rewards.keep_balance.weight = 0.3         # 稳定保持平衡权重 / Stable weight
         # self.rewards.keep_balance.weight = 1.0
 
-        # =========================================================================
-        # REMOVE NON-HIM REWARDS
-        # =========================================================================
-        # HIM does not use these specific regularization terms
-        self.rewards.pen_feet_regulation = None # Not need
-        self.rewards.foot_landing_vel = None # Not need
-        self.rewards.pen_undesired_contacts = None # Not need (though often kept for safety, strictly HIM doesn't list it)
-        self.rewards.pen_joint_pos_limits = None # Not need
-        self.rewards.pen_joint_vel_l2 = None # Not need (covered by power/smoothness)
-        self.rewards.pen_joint_torque = None # Not need (covered by power)
+        # HIM 不用的正则项 / HIM does not use these specific regularization terms
+        self.rewards.pen_feet_regulation = None
+        self.rewards.foot_landing_vel = None
+        self.rewards.pen_undesired_contacts = None
+        self.rewards.pen_joint_pos_limits = None
+        self.rewards.pen_joint_vel_l2 = None
+        self.rewards.pen_joint_torque = None
 
-        # debug_vis
-        self.commands.base_velocity.debug_vis=False # accelerate the training process
+        # 取消 debug_vis 以加速训练过程 / Disable debug_vis to accelerate training process
+        self.commands.base_velocity.debug_vis=False
+
 
 @configclass
 class PFHIMPlayEnvCfg(PFHIMBaseEnvCfg_PLAY):
@@ -478,8 +472,7 @@ class PFPIMEnvCfg(PFPIMBaseEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         
-        # ... (Terrain, Height Scanner, Observations, Commands setup remains the same) ...
-        # 1. 地形与课程设置
+        # 地形与课程设置 / Terrain and curriculum setup
         self.scene.terrain.terrain_type = "generator"
         self.scene.terrain.terrain_generator = HIM_TERRAINS_CFG
 
@@ -505,91 +498,81 @@ class PFPIMEnvCfg(PFPIMBaseEnvCfg):
         self.commands.base_velocity.limit_ranges.ang_vel_z = (-math.pi / 6, math.pi / 6)
         self.commands.gait_command = None
 
-        # =========================================================================
-        # REWARD MODIFICATIONS (Strictly following HIM Table 5)
-        # =========================================================================
-
-        # 1. Linear velocity tracking 
+        # 修改奖励函数 / Reward modifications
+        # 1. 线速度跟踪 / Linear velocity tracking 
         # Eq: exp(-|v_cmd - v_xy|^2 / sigma)
         # Weight: 1.0
         self.rewards.rew_lin_vel_xy.weight = 1.0
         self.rewards.rew_lin_vel_xy.params["std"] = 0.25 # sigma = 0.25
 
-        # 2. Angular velocity tracking 
+        # 2. 角速度跟踪 / Angular velocity tracking 
         # Eq: exp(-|w_cmd - w_yaw|^2 / sigma)
         # Weight: 0.5
         self.rewards.rew_ang_vel_z.weight = 0.5
         self.rewards.rew_ang_vel_z.params["std"] = 0.25 # sigma = 0.25
 
-        # 3. Linear velocity (z) 
+        # 3. 线速度 (z) / Linear velocity (z) 
         # Eq: v_z^2
         # Weight: -2.0
         self.rewards.pen_lin_vel_z.weight = -2.0 # -5.0 # -2.0
 
-        # 4. Angular velocity (xy) 
+        # 4. 角速度 (xy) / Angular velocity (xy) 
         # Eq: |w_xy|^2
         # Weight: -0.05
         self.rewards.pen_ang_vel_xy.weight = -0.05
 
-        # 5. Orientation 
+        # 5. 姿态 / Orientation 
         # Eq: |g_proj|^2 (approx via flat_orientation_l2)
         # Weight: -0.2
         self.rewards.pen_flat_orientation.weight = -0.2
 
-        # 6. Joint accelerations 
+        # 6. 关节加速度 / Joint accelerations 
         # Eq: |theta_ddot|^2
         # Weight: -2.5e-7
         self.rewards.pen_joint_accel.weight = -2.5e-7
 
-        # 7. Joint power 
+        # 7. 关节功率 / Joint power 
         # Eq: |tau * theta_dot|
         # Weight: -2e-5
         self.rewards.pen_joint_powers.weight = -2e-5
 
-        # 8. Body height 
+        # 8. 机器人基座高度 / Body height 
         # Eq: (h_target - h)^2
         # Weight: -1.0
         self.rewards.pen_base_height.weight = -1.0 # -2.0 # -1.0
-        # Important: HIM targets robot base height relative to ground. 
-        # Ensure target matches your robot. 
-        # Using height scanner to compute height relative to terrain.
         self.rewards.pen_base_height.params["sensor_cfg"] = SceneEntityCfg("height_scanner")
         self.rewards.pen_base_height.params["target_height"] = 0.68
 
-        # 9. Foot clearance 
+        # 9. 抬脚高度 / Foot clearance 
         # Eq: sum((p_z_target - p_z)^2 * v_xy)
         # Weight: -0.01
         # self.rewards.rew_feet_clearance.weight = 0.5
         # self.rewards.rew_feet_clearance = None
 
-
-        # 10. Action rate 
+        # 10. 动作速率 / Action rate 
         # Eq: |a_t - a_{t-1}|^2
         # Weight: -0.01
         self.rewards.pen_action_rate.weight = -0.01 # -0.05 # -0.01
 
-        # 11. Smoothness 
+        # 11. 平滑度 / Smoothness 
         # Eq: |a_t - 2a_{t-1} + a_{t-2}|^2
         # Weight: -0.01
         self.rewards.pen_action_smoothness.weight = -0.01
 
-        # =========================================================================
-        # REMOVE NON-HIM REWARDS
-        # =========================================================================
-        # HIM does not use these specific regularization terms
+        # 取消不用的正则项 / Remove unused regularization terms
         self.rewards.pen_feet_regulation = None
         # self.rewards.pen_feet_regulation.weight = -0.1
         self.rewards.foot_landing_vel = None
         # self.rewards.test_gait_reward.weight = 1.0 # 0.4
         self.rewards.test_gait_reward = None
-        self.rewards.pen_feet_distance.weight = -40.0 # Not in Table 5
+        self.rewards.pen_feet_distance.weight = -40.0   # 保留足距惩罚 / Keep feet_distance penalty
         # self.rewards.pen_feet_distance = None
-        self.rewards.pen_undesired_contacts = None # Not in Table 5 (though often kept for safety, strictly HIM doesn't list it)
-        self.rewards.pen_joint_pos_limits = None # Not in Table 5
-        self.rewards.pen_joint_vel_l2 = None # Not in Table 5 (covered by power/smoothness)
-        self.rewards.pen_joint_torque = None # Not in Table 5 (covered by power)
+        self.rewards.pen_undesired_contacts = None
+        self.rewards.pen_joint_pos_limits = None
+        self.rewards.pen_joint_vel_l2 = None
+        self.rewards.pen_joint_torque = None
         
-        # debug_vis
+        # 取消 debug_vis 以加速训练过程 / Disable debug_vis to accelerate training process
         self.commands.base_velocity.debug_vis=False
 
 
@@ -609,7 +592,7 @@ class PFPIMPlayEnvCfg(PFPIMBaseEnvCfg_PLAY):
         self.observations.policy.heights = None
         self.observations.perceptive.heights = ObsTerm(func=mdp.height_scan,
             params = {"sensor_cfg": SceneEntityCfg("height_scanner"),
-                      "offset":0.68}, # the defualt height of robot is 0.68m
+                      "offset":0.68},
             clip = (-2.0, 2.0),
         )
         

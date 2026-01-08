@@ -46,10 +46,10 @@ def foot_landing_vel(
     
     if height_scan_cfg is not None:
         sensor: RayCaster = env.scene[height_scan_cfg.name]
-        # Adjust the target height using the sensor data
+        # 调整目标高度，使用传感器数据 / Adjust the target height using the sensor data
         adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]-torch.mean(sensor.data.ray_hits_w[..., 2], dim=1).unsqueeze(1)
     else:
-        # Use the provided target height directly for flat terrain
+        # 使用提供的目标高度直接用于平坦地形 / Use the provided target height directly for flat terrain
         adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
 
     # 计算足部高度（相对于地面）/ Calculate foot height (relative to ground)
@@ -67,14 +67,16 @@ def foot_landing_vel(
 
 def joint_powers_l1(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """使用L1核惩罚关节功率 - 鼓励能效 / Penalize joint powers using L1-kernel - encourages energy efficiency"""
+    
     # 提取使用的数量（启用类型提示）/ Extract the used quantities (to enable type-hinting)
     asset: Articulation = env.scene[asset_cfg.name]
+    
     # 功率 = 力矩 × 角速度 / Power = Torque × Angular Velocity
     return torch.sum(torch.abs(torch.mul(asset.data.applied_torque, asset.data.joint_vel)), dim=1)
 
 
 def no_fly(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, threshold: float = 1.0) -> torch.Tensor:
-    """Reward if only one foot is in contact with the ground."""
+    """当且仅当只有一只脚接触地面时给予奖励 / Reward if only one foot is in contact with the ground."""
 
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
     latest_contact_forces = contact_sensor.data.net_forces_w_history[:, 0, :, 2]
@@ -86,7 +88,7 @@ def no_fly(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, threshold: float 
 
 
 def unbalance_feet_air_time(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Penalize if the feet air time variance exceeds the balance threshold."""
+    """惩罚如果脚的空气时间方差超过平衡阈值 / Penalize if the feet air time variance exceeds the balance threshold."""
 
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
 
@@ -94,7 +96,7 @@ def unbalance_feet_air_time(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) 
 
 
 def unbalance_feet_height(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Penalize the variance of feet maximum height using sensor positions."""
+    """惩罚使用传感器位置的脚最大高度方差 / Penalize the variance of feet maximum height using sensor positions."""
 
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
 
@@ -114,11 +116,11 @@ def feet_distance(env: ManagerBasedRLEnv,
                   feet_links_name: list[str]=["foot_[RL]_Link"],
                   min_feet_distance: float = 0.1,
                   max_feet_distance: float = 1.0,)-> torch.Tensor:
-    # Penalize base height away from target
+    """惩罚基座高度偏离目标 / Penalize base height away from target"""
     asset: Articulation = env.scene[asset_cfg.name]
     feet_links_idx = asset.find_bodies(feet_links_name)[0]
     feet_pos = asset.data.body_link_pos_w[:,feet_links_idx]
-    # feet distance on x-y plane
+    # 脚在 x-y 平面上的距离 / feet distance on x-y plane
     feet_distance = torch.norm(feet_pos[:, 0, :2] - feet_pos[:, 1, :2], dim=-1)
     reward = torch.clip(min_feet_distance - feet_distance, 0, 1)
     reward += torch.clip(feet_distance - max_feet_distance, 0, 1)
@@ -127,8 +129,8 @@ def feet_distance(env: ManagerBasedRLEnv,
 def nominal_foot_position(env: ManagerBasedRLEnv, command_name: str,
                           base_height_target: float,
                            asset_cfg: SceneEntityCfg, std: float) -> torch.Tensor:
-    """Compute the nominal foot position"""
-    # extract the used quantities (to enable type-hinting)
+    """计算名义脚位置 / Compute the nominal foot position"""
+    # 提取使用的数量（以启用类型提示）/ Extract the used quantities (to enable type-hinting)
     asset: RigidObject | Articulation = env.scene[asset_cfg.name]
     feet_pos_w = asset.data.body_link_pos_w[:, asset_cfg.body_ids]
     base_quat = asset.data.root_link_quat_w.unsqueeze(1).expand(-1, 2, -1)
@@ -147,8 +149,8 @@ def nominal_foot_position(env: ManagerBasedRLEnv, command_name: str,
 def leg_symmetry(env: ManagerBasedRLEnv,
     std: float,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),) -> torch.Tensor:
-    """Reward regulate abad joint position."""
-    # extract the used quantities (to enable type-hinting)
+    """奖励腿部对称性 / Reward leg symmetry"""
+    # 提取使用的数量（以启用类型提示）/ Extract the used quantities (to enable type-hinting)
     asset: RigidObject | Articulation = env.scene[asset_cfg.name]
     feet_pos_w = asset.data.body_link_pos_w[:, asset_cfg.body_ids]
     base_quat = asset.data.root_link_quat_w.unsqueeze(1).expand(-1, 2, -1)
@@ -164,8 +166,8 @@ def leg_symmetry(env: ManagerBasedRLEnv,
 
 def same_feet_x_position(env: ManagerBasedRLEnv,
                   asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Reward regulate abad joint position."""
-    # extract the used quantities (to enable type-hinting)
+    """奖励调节跖趾关节位置 / Reward regulate abad joint position."""
+    # 提取使用的数量（以启用类型提示）/ Extract the used quantities (to enable type-hinting)
     asset: RigidObject | Articulation = env.scene[asset_cfg.name]
     feet_pos_w = asset.data.body_link_pos_w[:, asset_cfg.body_ids]
     base_quat = asset.data.root_link_quat_w.unsqueeze(1).expand(-1, 2, -1)
@@ -186,7 +188,7 @@ def keep_ankle_pitch_zero_in_air(
     force_threshold: float = 2.0,
     pitch_scale: float = 0.2
 ) -> torch.Tensor:
-    """Reward for keeping ankle pitch angle close to zero when foot is in the air.
+    """保持脚在空中时踝关节俯仰角接近零的奖励 / Reward for keeping ankle pitch angle close to zero when foot is in the air.
     
     Args:
         env: The environment object.
@@ -209,17 +211,15 @@ def keep_ankle_pitch_zero_in_air(
     return torch.exp(-weighted_ankle_pitch / pitch_scale)
 
 def no_contact(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
-    """
-    Penalize if both feet are not in contact with the ground.
-    """
+    """惩罚当双脚都未接触地面时的情况 / Penalize if both feet are not in contact with the ground."""
 
-    # Access the contact sensor
+    # 获取接触传感器 / Access the contact sensor
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
 
-    # Get the latest contact forces in the z direction (upward direction)
+    # 获取最新的接触力在z方向（向上方向） / Get the latest contact forces in the z direction (upward direction)
     latest_contact_forces = contact_sensor.data.net_forces_w_history[:, 0, :, 2]  # shape: (env_num, 2)
 
-    # Determine if each foot is in contact
+    # 判断每只脚是否接触 / Determine if each foot is in contact
     contacts = latest_contact_forces > 1.0  # Returns a boolean tensor where True indicates contact
 
     return (torch.sum(contacts.float(), dim=1) == 0).float()
@@ -228,9 +228,7 @@ def no_contact(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tens
 def stand_still(
     env, lin_threshold: float = 0.05, ang_threshold: float = 0.05, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
-    """
-    penalizing linear and angular motion when command velocities are near zero.
-    """
+    """惩罚当命令速度接近零时的线性和角速度 / Penalize linear and angular motion when command velocities are near zero."""
 
     asset = env.scene[asset_cfg.name]
     base_lin_vel = asset.data.root_lin_vel_w[:, :2]
@@ -287,15 +285,15 @@ def foot_clearance_reward(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, target_height: tuple[float, float], std: float, tanh_mult: float, foot_radius:float,
     sensor_cfg: SceneEntityCfg | None = None,
 ) -> torch.Tensor:
-    """Reward the swinging feet for clearing a specified height off the ground"""
+    """奖励摆动的脚部清除指定高度的地面 / Reward the swinging feet for clearing a specified height off the ground"""
     asset: RigidObject = env.scene[asset_cfg.name]
     min_h, max_h = target_height
     if sensor_cfg is not None:
         sensor: RayCaster = env.scene[sensor_cfg.name]
-        # Adjust the target height using the sensor data
+        # 使用传感器数据调整目标高度 / Adjust the target height using the sensor data
         adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]-torch.mean(sensor.data.ray_hits_w[..., 2], dim=1).unsqueeze(1)
     else:
-        # Use the provided target height directly for flat terrain
+        # 直接使用提供的目标高度用于平坦地形 / Use the provided target height directly for flat terrain
         adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
     # 计算足部高度 / Calculate foot height
     feet_height = torch.clip(
@@ -311,12 +309,12 @@ def foot_clearance_reward(
 def foot_clearance_by_contact_reward(
     env: ManagerBasedRLEnv,
     asset_cfg: SceneEntityCfg,
-    contact_sensor_cfg: SceneEntityCfg,  # [新增] 必须参数：接触力传感器
+    contact_sensor_cfg: SceneEntityCfg,  # 必须参数：接触力传感器 / Required parameter: contact force sensor
     target_height: tuple[float, float],
     std: float,
     foot_radius: float,
-    contact_threshold: float = 0.1,      # [新增] 接触力阈值 (N)，低于此值视为摆动相
-    height_sensor_cfg: SceneEntityCfg | None = None, # [重命名] 可选：原 sensor_cfg，用于地形高度修正
+    contact_threshold: float = 0.1,      # 接触力阈值 (N)，低于此值视为摆动相 / Contact force threshold (N), below which is considered swing phase
+    height_sensor_cfg: SceneEntityCfg | None = None, # 可选：原 sensor_cfg，用于地形高度修正 / Optional: original sensor_cfg, used for terrain height adjustment
 ) -> torch.Tensor:
     """
     Reward the swinging feet for clearing a specified height off the ground.
@@ -326,13 +324,14 @@ def foot_clearance_by_contact_reward(
     contact_sensor: ContactSensor = env.scene[contact_sensor_cfg.name]
     
     if height_sensor_cfg is not None:
-        # 如果有高度扫描仪（用于崎岖地形），减去地形高度
+        # 如果有高度扫描仪（用于崎岖地形），减去地形高度 / If there is a height scanner (for rough terrain), subtract terrain height
         height_scanner: RayCaster = env.scene[height_sensor_cfg.name]
-        # 注意：这里假设扫描仪光线与脚部对应。取平均值是一个简化的做法。
+
+        # 注意：这里假设扫描仪光线与脚部对应。取平均值是一个简化的做法。/ Note: It is assumed here that the scanner rays correspond to the feet. Taking the average is a simplification.
         terrain_height = torch.mean(height_scanner.data.ray_hits_w[..., 2], dim=1).unsqueeze(1)
         adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2] - terrain_height
     else:
-        # 平坦地形直接使用绝对高度
+        # 平坦地形直接使用绝对高度 / For flat terrain, use absolute height directly
         adjusted_height = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
 
     feet_height = torch.clip(adjusted_height - foot_radius, 0.0, 1.0)
@@ -356,9 +355,12 @@ def base_height_rough_l2(
     sensor_cfg: SceneEntityCfg,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
-    """Penalize asset height from its target using L2 squared kernel.
+    """
+    惩罚资产高度偏离目标, 使用L2平方核。
+    Penalize asset height from its target using L2 squared kernel.
 
-    Note:
+    备注 / Note:
+        目前，它假设地形是平坦的，即目标高度在世界坐标系中。
         Currently, it assumes a flat terrain, i.e. the target height is in the world frame.
     """
     # extract the used quantities (to enable type-hinting)
@@ -383,16 +385,16 @@ def base_com_height(
     Note: For flat terrain, target height is in the world frame. For rough terrain,
     sensor readings can adjust the target height to account for the terrain.
     """
-    # extract the used quantities (to enable type-hinting)
+    # 提取使用的数量（启用类型提示）/ Extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
     if sensor_cfg is not None:
         sensor: RayCaster = env.scene[sensor_cfg.name]
-        # Adjust the target height using the sensor data
+        # 调整目标高度以适应地形 / Adjust the target height using the sensor data
         adjusted_target_height = target_height + torch.mean(sensor.data.ray_hits_w[..., 2], dim=1)
     else:
-        # Use the provided target height directly for flat terrain
+        # 对于平坦地形，直接使用提供的目标高度 / Use the provided target height directly for flat terrain
         adjusted_target_height = target_height
-    # Compute the L2 squared penalty
+    # 计算L2平方惩罚 / Compute the L2 squared penalty
     return torch.abs(asset.data.root_pos_w[:, 2] - adjusted_target_height)
 
 
@@ -436,36 +438,39 @@ class GaitReward(ManagerTermBase):
         sensor_cfg,
         asset_cfg,
     ) -> torch.Tensor:
-        """Compute the reward.
+        """
+        计算奖励。
+        Compute the reward.
 
+        奖励结合了基于力和基于速度的项，以鼓励期望的步态模式。
         The reward combines force-based and velocity-based terms to encourage desired gait patterns.
 
-        Args:
-            env: The RL environment instance.
+        参数 / Args:
+            env: RL环境实例 / The RL environment instance.
 
-        Returns:
-            The reward value.
+        返回值 / Returns:
+            奖励值 / The reward value.
         """
 
         gait_params = env.command_manager.get_command(self.command_name)
 
-        # Update contact targets
+        # 更新接触目标 / Update contact targets
         desired_contact_states = self.compute_contact_targets(gait_params)
 
-        # Force-based reward
+        # 基于力的奖励 / Force-based reward
         foot_forces = torch.norm(self.contact_sensor.data.net_forces_w[:, self.sensor_cfg.body_ids], dim=-1)
         force_reward = self._compute_force_reward(foot_forces, desired_contact_states)
 
-        # Velocity-based reward
+        # 基于速度的奖励 / Velocity-based reward
         foot_velocities = torch.norm(self.asset.data.body_lin_vel_w[:, self.asset_cfg.body_ids], dim=-1)
         velocity_reward = self._compute_velocity_reward(foot_velocities, desired_contact_states)
 
-        # Combine rewards
+        # 组合奖励 / Combine rewards
         total_reward = force_reward + velocity_reward
         return total_reward
 
     def compute_contact_targets(self, gait_params):
-        """Calculate desired contact states for the current timestep."""
+        """计算当前时间步的期望接触状态 / Calculate desired contact states for the current timestep."""
         frequencies = gait_params[:, 0]
         offsets = gait_params[:, 1]
         durations = torch.cat(
@@ -482,7 +487,7 @@ class GaitReward(ManagerTermBase):
 
         gait_indices = torch.remainder(self._env.episode_length_buf * self.dt * frequencies, 1.0)
 
-        # Calculate foot indices
+        # 计算脚部索引 / Calculate foot indices
         foot_indices = torch.remainder(
             torch.cat(
                 [gait_indices.view(self.num_envs, 1), (gait_indices + offsets + 1).view(self.num_envs, 1)],
@@ -491,17 +496,17 @@ class GaitReward(ManagerTermBase):
             1.0,
         )
 
-        # Determine stance and swing phases
+        # 计算站立和摆动阶段 / Determine stance and swing phases
         stance_idxs = foot_indices < durations
         swing_idxs = foot_indices > durations
 
-        # Adjust foot indices based on phase
+        # 根据阶段调整脚部索引 / Adjust foot indices based on phase
         foot_indices[stance_idxs] = torch.remainder(foot_indices[stance_idxs], 1) * (0.5 / durations[stance_idxs])
         foot_indices[swing_idxs] = 0.5 + (torch.remainder(foot_indices[swing_idxs], 1) - durations[swing_idxs]) * (
             0.5 / (1 - durations[swing_idxs])
         )
 
-        # Calculate desired contact states using von mises distribution
+        # 计算期望接触状态，使用冯·米塞斯分布 / Calculate desired contact states using von mises distribution
         smoothing_cdf_start = distributions.normal.Normal(0, self.kappa_gait_probs).cdf
         desired_contact_states = smoothing_cdf_start(foot_indices) * (
             1 - smoothing_cdf_start(foot_indices - 0.5)
@@ -512,10 +517,10 @@ class GaitReward(ManagerTermBase):
     def _compute_force_reward(self, forces: torch.Tensor, desired_contacts: torch.Tensor) -> torch.Tensor:
         """计算基于力的奖励组件 / Compute force-based reward component."""
         reward = torch.zeros_like(forces[:, 0])
-        if self.force_scale < 0:  # Negative scale means penalize unwanted contact
+        if self.force_scale < 0:      # 负的缩放因子表示惩罚不期望的接触 / Negative scale means penalize unwanted contact
             for i in range(forces.shape[1]):
                 reward += (1 - desired_contacts[:, i]) * (1 - torch.exp(-forces[:, i] ** 2 / self.force_sigma))
-        else:  # Positive scale means reward desired contact
+        else:       # 正的缩放因子表示奖励期望接触 / Positive scale means reward desired contact
             for i in range(forces.shape[1]):
                 reward += (1 - desired_contacts[:, i]) * torch.exp(-forces[:, i] ** 2 / self.force_sigma)
 
@@ -524,10 +529,10 @@ class GaitReward(ManagerTermBase):
     def _compute_velocity_reward(self, velocities: torch.Tensor, desired_contacts: torch.Tensor) -> torch.Tensor:
         """计算基于速度的奖励组件 / Compute velocity-based reward component."""
         reward = torch.zeros_like(velocities[:, 0])
-        if self.vel_scale < 0:  # Negative scale means penalize movement during contact
+        if self.vel_scale < 0:      # 负的缩放因子表示惩罚接触阶段的运动 / Negative scale means penalize movement during contact
             for i in range(velocities.shape[1]):
                 reward += desired_contacts[:, i] * (1 - torch.exp(-velocities[:, i] ** 2 / self.vel_sigma))
-        else:  # Positive scale means reward movement during swing
+        else:       # 正的缩放因子表示奖励摆动阶段的运动 / Positive scale means reward movement during swing
             for i in range(velocities.shape[1]):
                 reward += desired_contacts[:, i] * torch.exp(-velocities[:, i] ** 2 / self.vel_sigma)
 
@@ -535,17 +540,19 @@ class GaitReward(ManagerTermBase):
 
 
 class ActionSmoothnessPenalty(ManagerTermBase):
-    """动作平滑性惩罚类 - 惩罚网络动作输出的大幅瞬时变化 / Action smoothness penalty class - penalizes large instantaneous changes in network action output.
-    
+    """
+    动作平滑性惩罚类 - 惩罚网络动作输出的大幅瞬时变化 / Action smoothness penalty class - penalizes large instantaneous changes in network action output.
+
     此惩罚鼓励动作随时间更平滑。/ This penalty encourages smoother actions over time.
     """
 
     def __init__(self, cfg: RewardTermCfg, env: ManagerBasedRLEnv):
-        """Initialize the term.
+        """
+        初始化该项 / Initialize the term
 
-        Args:
-            cfg: The configuration of the reward term.
-            env: The RL environment instance.
+        参数 / Args:
+            cfg: 奖励项的配置 / The configuration of the reward term.
+            env: 强化学习环境实例 / The RL environment instance.
         """
         super().__init__(cfg, env)
         self.dt = env.step_dt
@@ -554,18 +561,19 @@ class ActionSmoothnessPenalty(ManagerTermBase):
         # self.__name__ = "action_smoothness_penalty"
 
     def __call__(self, env: ManagerBasedRLEnv) -> torch.Tensor:
-        """Compute the action smoothness penalty.
-
-        Args:
-            env: The RL environment instance.
-
-        Returns:
-            The penalty value based on the action smoothness.
         """
-        # Get the current action from the environment's action manager
+        计算动作平滑性惩罚 / Compute the action smoothness penalty.
+
+        参数 / Args:
+            env: 强化学习环境实例 / The RL environment instance.
+
+        返回值 / Returns:
+            基于动作平滑性的惩罚值 / The penalty value based on the action smoothness.
+        """
+        # 获取当前动作 / Get the current action from the environment's action manager
         current_action = env.action_manager.action.clone()
 
-        # If this is the first call, initialize the previous actions
+        # 如果这是第一次调用，初始化之前的动作 / If this is the first call, initialize the previous actions
         if self.prev_action is None:
             self.prev_action = current_action
             return torch.zeros(current_action.shape[0], device=current_action.device)
@@ -575,18 +583,18 @@ class ActionSmoothnessPenalty(ManagerTermBase):
             self.prev_action = current_action
             return torch.zeros(current_action.shape[0], device=current_action.device)
 
-        # Compute the smoothness penalty
+        # 计算动作平滑性惩罚 / Compute the smoothness penalty
         penalty = torch.sum(torch.square(current_action - 2 * self.prev_action + self.prev_prev_action), dim=1)
 
-        # Update the previous actions for the next call
+        # 更新之前的动作以供下一次调用 / Update the previous actions for the next call
         self.prev_prev_action = self.prev_action
         self.prev_action = current_action
 
-        # Apply a condition to ignore penalty during the first few episodes
+        # 在前几个回合忽略惩罚的条件 / Apply a condition to ignore penalty during the first few episodes
         startup_env_mask = env.episode_length_buf < 3
         penalty[startup_env_mask] = 0
 
-        # Return the penalty scaled by the configured weight
+        # 返回按配置权重缩放的惩罚值 / Return the penalty scaled by the configured weight
         return penalty
     
     

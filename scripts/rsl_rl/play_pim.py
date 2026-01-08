@@ -7,7 +7,7 @@ import re
 
 from isaaclab.app import AppLauncher
 
-# local imports
+# 本地导入 / Local imports
 import cli_args  # isort: skip
 
 # 添加argparse参数 / Add argparse arguments
@@ -21,16 +21,16 @@ parser.add_argument("--seed", type=int, default=None, help="Seed used for the en
 parser.add_argument("--checkpoint_path", type=str, default=None, help="Relative path to checkpoint file.")
 parser.add_argument("--save_path", type=str, default=None, help="Path to save play logs (.npz/.csv).")
 
-# append RSL-RL cli arguments
+# 添加 RSL-RL cli 参数 / Append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
-# append AppLauncher cli args
+# 添加 AppLauncher cli 参数 / Append AppLauncher cli arguments
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
 if args_cli.video:
     args_cli.enable_cameras = True
 
-# launch omniverse app
+# 启动 omniverse 应用 / Launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
@@ -49,7 +49,7 @@ from isaaclab.envs import ManagerBasedRLEnvCfg, DirectMARLEnv, multi_agent_to_si
 from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlVecEnvWrapper
-# Import extensions to set up environment tasks
+# 导入扩展以设置环境任务 / Import extensions to set up environment tasks
 import bipedal_locomotion  # noqa: F401
 from bipedal_locomotion.utils.wrappers.rsl_rl.pim_exporter import export_pim_actor_critic_as_jit, export_pim_actor_critic_as_onnx
 from data_recorder import DataRecorder
@@ -90,22 +90,20 @@ def main():
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    # convert to single-agent instance if required by the RL algorithm
+    # 转换为单智能体实例（如果RL算法需要）/ Convert to single-agent instance if required by the RL algorithm
     if isinstance(env.unwrapped, DirectMARLEnv):
         env = multi_agent_to_single_agent(env)
 
-    # wrap around environment for rsl-rl
+    # 为 rsl-rl 包装环境 / Wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
 
     camera_controller = CameraController(env)
-    # load previously trained model
+    # 加载先前训练的模型 / Load previously trained model
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-
     ppo_runner = PIMOnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-
     ppo_runner.load(resume_path)
 
-    # obtain the trained policy for inference
+    # 获取训练好的策略以进行推理 / Obtain the trained policy for inference
     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
 
     # 导出策略到jit / Export policy to jit
@@ -116,36 +114,36 @@ def main():
     print("Exported policy as jit script to: ", export_model_dir)
 
     if EXPORT_POLICY:
-        # 导出策略到onnx / Export policy to onnx
+        # 导出策略到 onnx / Export policy to onnx
         export_pim_actor_critic_as_onnx(
             ppo_runner.alg.actor_critic, export_model_dir,
         )
         print("Exported policy as onnx model to: ", export_model_dir)
 
-        # else:
-        # reset environment
         obs, extras = env.get_observations()
 
-        # PIM 关键：从 extras 中提取历史并展平, 提取感知观测
+        # PIM：从 extras 中提取历史并展平, 提取感知观测 / PIM: extract history from extras and flatten, extract perceptive observations
         obs_history = obs
         obs_history = obs_history.flatten(start_dim=1)
         obs_perceptive = extras["observations"]["perceptive"].squeeze(1)
 
         step_idx = 0
         recorder = DataRecorder(log_dir, args_cli, lin_vel_start=27)
-        # simulate environment
+        # 模拟环境 / Simulate environment
         while simulation_app.is_running():
-            # run everything in inference mode
+            # 以推理模式运行所有操作 / Run everything in inference mode
             with torch.inference_mode():
                 camera_controller.update_camera_view()
-                # agent stepping
+
+                # 智能体步进 / Agent stepping
                 actions = policy(obs_history, obs_perceptive)
                 ret = env.step(actions)
-                # 兼容性处理：检查返回值数量
+                
+                # 兼容性处理：检查返回值数量 / Compatibility handling: check number of return values
                 if len(ret) == 5:
                     obs, rew, terminated, truncated, extras = ret
                 else:
-                    obs, rew, dones, extras = ret # 假设是旧版或 Wrapper 后的 4 值
+                    obs, rew, dones, extras = ret # 假设是旧版或 Wrapper 后的 4 值 / Assume old version or after Wrapper with 4 values
 
                 # PIM
                 obs_history = obs
@@ -157,13 +155,13 @@ def main():
                 recorder.step(step_idx, obs_pack, cmd_vel, env)
                 step_idx += 1
 
-        # close the simulator
+        # 关闭模拟器 / Close the simulator
         env.close()
 
 
 if __name__ == "__main__":
     EXPORT_POLICY = True
-    # run the main execution
+    # 运行主执行流程 / Run the main execution
     main()
-    # close sim app
+    # 关闭模拟器应用 / Close sim app
     simulation_app.close()

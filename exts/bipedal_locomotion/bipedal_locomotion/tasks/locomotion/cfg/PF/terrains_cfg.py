@@ -218,29 +218,28 @@ STAIRS_TERRAINS_PLAY_CFG = TerrainGeneratorCfg(
     difficulty_range=(1.0, 1.0),
 )
 
-
 HIM_TERRAINS_CFG = TerrainGeneratorCfg(
     seed=42,
-    size=(15.0, 15.0),          # HIM论文指定每个地形块为 15x15 m
+    size=(15.0, 15.0),          # 每个地形块为 15x15 m / Each terrain tile is 15x15 meters
     border_width=20.0,
-    num_rows=10,                # 对应论文中的 10 个难度等级 (0-9)
-    num_cols=20,                # 对应论文中的 20 列 (混合不同地形)
+    num_rows=10,                # 10 个难度等级 (0-9) / 10 difficulty levels (0-9)
+    num_cols=20,                # 20 列混合不同地形 / 20 columns mix of different terrains
     horizontal_scale=0.1,
     vertical_scale=0.005,
     slope_threshold=0.75,
     use_cache=True,
     
-    # 启用课程学习，难度从0到1
+    # 启用课程学习，难度从 0 到 1 / Enable curriculum learning, difficulty from 0 to 1
     curriculum=True,
     difficulty_range=(0.0, 1.0),
     
     sub_terrains={
-        # 1. 楼梯 (Stairs) - 占比 60% (0.6)
-        # HIM参数: 高度 5-23cm, 宽度 20-40cm
+        # 1. 楼梯 (Stairs) - 占比 60% (0.6) / Stairs - 60% proportion (0.6)
+        # HIM 参数: 高度 5-23cm, 宽度 20-40cm / HIM parameters: height 5-23cm, width 20-40cm
         "pyramid_stairs": MeshPyramidStairsTerrainCfg(
             proportion=0.3,
             step_height_range=(0.05, 0.20), 
-            step_width=0.3,                 # 取论文 20-40cm 的平均值
+            step_width=0.3,                 # 取论文 20-40cm 的平均值 / Use average of 20-40cm from the paper
             platform_width=3.0,
             border_width=1.0,
             holes=False,
@@ -249,13 +248,14 @@ HIM_TERRAINS_CFG = TerrainGeneratorCfg(
         "inverse_pyramid_stairs": MeshInvertedPyramidStairsTerrainCfg(
             proportion=0.3,
             step_height_range=(0.05, 0.20), 
-            step_width=0.3,                 # 取论文 20-40cm 的平均值
+            step_width=0.3,                 # 取论文 20-40cm 的平均值 / Use average of 20-40cm from the paper
             platform_width=3.0,
             border_width=1.0,
             holes=False,
         ),
         
-        # 2. 粗糙地形
+        # 2. 粗糙地形 (Random Rough) - 占比 20% (0.2) / Random Rough - 20% proportion (0.2)
+        # HIM 参数: 噪声高度 1-6cm / HIM parameters: noise height 1-6cm
         "random_rough": HfRandomUniformTerrainCfg(
             proportion=0.2,                
             noise_range=(0.01, 0.06), 
@@ -263,22 +263,22 @@ HIM_TERRAINS_CFG = TerrainGeneratorCfg(
             border_width=0.25
         ),
         
-        # 3. 平滑斜坡 (Slopes) - 占比 10% (0.1)
-        # HIM参数: 倾角 0-40度
+        # 3. 平滑斜坡 (Slopes) - 占比 10% (0.1) / Slopes - 10% proportion (0.1)
+        # HIM 参数: 倾角 0-40 度 / HIM parameters: slope 0-40 degrees
         "pyramid_slope": HfPyramidSlopedTerrainCfg(
             proportion=0.1,
-            slope_range=(0.0, 0.7),         # 0-40度
+            slope_range=(0.0, 0.7),     # 0-40 度对应的斜率范围 / Slope range corresponding to 0-40 degrees
             platform_width=3.0,
             border_width=1.0,
         ),
         
-        # 4. 离散障碍 (Discrete Obstacles) - 占比 10% (0.1)
-        # HIM参数: 高度 +/- 5cm 到 +/- 15cm
+        # 4. 离散障碍 (Discrete Obstacles) - 占比 10% (0.1) / Discrete Obstacles - 10% proportion (0.1)
+        # HIM 参数: 高度 +/- 5cm 到 +/- 15cm / HIM parameters: height +/- 5cm to +/- 15cm
         "discrete_obstacles": HfDiscreteObstaclesTerrainCfg(
             proportion=0.1,
             obstacle_height_mode="choice",
-            obstacle_height_range=(0.05, 0.15), # 严格匹配论文: 5cm - 15cm
-            obstacle_width_range=(0.4, 0.6),    # 设置宽度范围，均值为0.5m
+            obstacle_height_range=(0.05, 0.15), # 设置高度范围: 5cm - 15cm / Set height range: 5cm - 15cm
+            obstacle_width_range=(0.4, 0.6),    # 设置宽度范围：均值 0.5m / Set width range, mean 0.5m
             platform_width=3.0,
             border_width=1.0,
             num_obstacles=40,
@@ -286,24 +286,23 @@ HIM_TERRAINS_CFG = TerrainGeneratorCfg(
     },
 )
 
-
 HIM_PLAY_TERRAINS_CFG = TerrainGeneratorCfg(
     seed=42,
-    size=(12.0, 12.0),          # 保持每个地形块 10x10m 不变，与训练一致
-    border_width=5.0,           # 减小边界宽度，方便查看
-    num_rows=10,                 # 5 行：代表 5 个难度等级 (从易到难)
-    num_cols=8,                 # 4 列：刚好容纳 4 种地形类型
+    size=(12.0, 12.0),          # 保持每个地形块 10x10m 不变，与训练一致 / Keep each terrain tile 10x10m, consistent with training
+    border_width=5.0,           # 减小边界宽度，方便查看 / Reduce border width for easier viewing
+    num_rows=10,                # 10 个难度等级 (0-9) / 10 difficulty levels (0-9)
+    num_cols=8,                 # 8 列用于测试 / 8 columns for testing
     horizontal_scale=0.1,
     vertical_scale=0.005,
     slope_threshold=0.75,
     use_cache=True,
     
-    # [关键修改] 关闭课程学习，用于随机验证
+    # 关闭课程学习，用于随机验证 / Disable curriculum learning for random validation
     curriculum=False,
-    difficulty_range=(0.5, 1.0), # 依然保留难度梯度，第0行最简单，第4行最难 (对应论文的Level 9)
+    difficulty_range=(0.5, 1.0),   # 中高难度范围 / Medium to high difficulty range
     
     sub_terrains={
-        # 1. 楼梯 (Stairs) - 占比 0.25
+        # 1. 楼梯 (Stairs) - 占比 0.25 / Stairs - 25% proportion
         "pyramid_stairs": MeshPyramidStairsTerrainCfg(
             proportion=0.2,
             step_height_range=(0.05, 0.20),
@@ -316,36 +315,37 @@ HIM_PLAY_TERRAINS_CFG = TerrainGeneratorCfg(
         "inverse_pyramid_stairs": MeshInvertedPyramidStairsTerrainCfg(
             proportion=0.2,
             step_height_range=(0.05, 0.20), 
-            step_width=0.3,                 # 取论文 20-40cm 的平均值
+            step_width=0.3,
             platform_width=3.0,
             border_width=1.0,
             holes=False,
         ),
         
-        # 3. 平滑斜坡 (Slopes) - 占比 0.25
-        "pyramid_slope": HfPyramidSlopedTerrainCfg(
-            proportion=0.2,
-            slope_range=(0.0, 0.7),         # HIM: 0-40度
-            platform_width=3.0,
-            border_width=1.0,
-        ),
-        
-        # 4. 离散障碍 (Discrete Obstacles) - 占比 0.25
-        "discrete_obstacles": HfDiscreteObstaclesTerrainCfg(
-            proportion=0.2,
-            obstacle_height_mode="choice",
-            obstacle_height_range=(0.05, 0.15), # HIM: 5-15cm
-            obstacle_width_range=(0.4, 0.6),    # 修正后的宽度范围参数
-            platform_width=3.0,
-            border_width=1.0,
-            num_obstacles=40,
-        ),
-        
+        # 2. 粗糙地形 (Random Rough) - 占比 0.25 / Random Rough - 25% proportion
         "random_rough": HfRandomUniformTerrainCfg(
             proportion=0.2,                
             noise_range=(0.01, 0.06), 
             noise_step=0.01, 
             border_width=0.25
         ),
+
+        # 3. 平滑斜坡 (Slopes) - 占比 0.25 / Slopes - 25% proportion
+        "pyramid_slope": HfPyramidSlopedTerrainCfg(
+            proportion=0.2,
+            slope_range=(0.0, 0.7),         # 0-40 度对应的斜率范围 / Slope range corresponding to 0-40 degrees
+            platform_width=3.0,
+            border_width=1.0,
+        ),
+        
+        # 4. 离散障碍 (Discrete Obstacles) - 占比 0.25 / Discrete Obstacles - 25% proportion
+        "discrete_obstacles": HfDiscreteObstaclesTerrainCfg(
+            proportion=0.2,
+            obstacle_height_mode="choice",
+            obstacle_height_range=(0.05, 0.15),
+            obstacle_width_range=(0.4, 0.6),
+            platform_width=3.0,
+            border_width=1.0,
+            num_obstacles=40,
+        ),        
     },
 )

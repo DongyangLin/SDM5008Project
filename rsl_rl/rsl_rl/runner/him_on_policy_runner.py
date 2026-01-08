@@ -55,12 +55,12 @@ class HIMOnPolicyRunner:
         self.device = device
         self.env = env
         
-        # 观测信息
+        # 观测信息维度 / Observation dimensions
         obs, extras = self.env.get_observations()   # obs: (batch_size, history_length, obs_dim)
-        self.num_one_step_obs = obs.shape[2]   # dim(o^a_t) = 45
-        self.num_actor_obs = obs.shape[1] * obs.shape[2]   # dim(o^a_t-H:t) = 225
+        self.num_one_step_obs = obs.shape[2]        # dim(o^a_t) = 33
+        self.num_actor_obs = obs.shape[1] * obs.shape[2]   # dim(o^a_t-H:t) = 165
         assert "critic" in extras["observations"], f"Critic observations not found in observations"
-        num_critic_obs = extras["observations"]["critic"].shape[1]   # dim(o^c_t) = 45
+        num_critic_obs = extras["observations"]["critic"].shape[1]   # dim(o^c_t) = 186
         self.num_critic_obs = num_critic_obs
         
         actor_critic_class = eval(self.policy_cfg.pop("class_name"))   # HIMActorCritic
@@ -74,10 +74,10 @@ class HIMOnPolicyRunner:
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
 
-        # init storage and model
+        # 初始化存储和模型 / Initialize storage and model
         self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [self.num_actor_obs], [self.num_critic_obs], [self.env.num_actions])
 
-        # Log
+        # 日志 / Logging
         self.log_dir = log_dir
         self.writer = None
         self.tot_timesteps = 0
@@ -87,7 +87,7 @@ class HIMOnPolicyRunner:
         _, _ = self.env.reset()
     
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
-        # initialize writer
+        # 初始化写入器 / Initialize writer
         if self.log_dir is not None and self.writer is None:
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
@@ -107,7 +107,7 @@ class HIMOnPolicyRunner:
         tot_iter = self.current_learning_iteration + num_learning_iterations
         for it in range(self.current_learning_iteration, tot_iter):
             start = time.time()
-            # Rollout
+            # 采样过程 / Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
                     actions = self.alg.act(flattened_obs, critic_obs)
@@ -121,7 +121,7 @@ class HIMOnPolicyRunner:
                     self.alg.process_env_step(rewards, dones, infos, next_critic_obs)
                 
                     if self.log_dir is not None:
-                        # Book keeping
+                        # 记录信息 / Book keeping
                         if 'episode' in infos:
                             ep_infos.append(infos['episode'])
                         elif "log" in infos:
@@ -137,7 +137,7 @@ class HIMOnPolicyRunner:
                 stop = time.time()
                 collection_time = stop - start
 
-                # Learning step
+                # 学习步骤 / Learning step
                 start = stop
                 self.alg.compute_returns(critic_obs)
                 
@@ -163,7 +163,7 @@ class HIMOnPolicyRunner:
             for key in locs['ep_infos'][0]:
                 infotensor = torch.tensor([], device=self.device)
                 for ep_info in locs['ep_infos']:
-                    # handle scalar and zero dimensional tensor infos
+                    # 处理标量和零维张量信息 / Handle scalar and zero dimensional tensor infos
                     if not isinstance(ep_info[key], torch.Tensor):
                         ep_info[key] = torch.Tensor([ep_info[key]])
                     if len(ep_info[key].shape) == 0:

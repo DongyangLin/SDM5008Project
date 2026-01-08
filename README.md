@@ -2,7 +2,7 @@
 
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
-[![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.1.0-silver)](https://isaac-sim.github.io/IsaacLab)
+[![IsaacLab](https://img.shields.io/badge/IsaacLab-2.1.0-silver)](https://isaac-sim.github.io/IsaacLab)
 [![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
 [![License](images/README/license-GPLv3-blue.svg)](LICENSE)
 
@@ -73,6 +73,7 @@ Please refer to the official IsaacLab documentation: [IsaacLab Installation](htt
     ```
   
 - 克隆并安装项目仓库 / Clone and install the project repository
+  
   请将仓库克隆到 `IsaacLab` 文件夹之外！
   
   Please clone the repository outside the `IsaacLab` folder!
@@ -222,11 +223,9 @@ SDM5008Project/                         # 项目根目录
 │       │   │   └── locomotion/          # 行走/运动任务
 │       │   │       ├── agents/          # 强化学习智能体配置
 │       │   │       ├── cfg/             # 环境与任务配置
-│       │   │       │   ├── PF/           # Point-Foot 机器人任务配置
-│       │   │       │   ├── SF/           # Sole-Foot 机器人任务配置
-│       │   │       │   └── WF/           # Wheel-Foot 机器人任务配置
+│       │   │       │   └── PF/           # Point-Foot 机器人任务配置
 │       │   │       ├── mdp/             # MDP（马尔可夫决策过程）定义
-│       │   │       └── robots/           # 机器人环境封装
+│       │   │       └── robots/          # 机器人环境封装
 │       │   └── utils/                   # 工具函数
 │       ├── config/                      # 扩展级别的全局配置
 │       ├── docs/                        # 项目文档（设计说明、实验说明等）
