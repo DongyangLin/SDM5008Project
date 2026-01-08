@@ -337,8 +337,6 @@ $$
 | **rew_feet_clearance**   | $\sum (h_{foot} - h_{target})^2 \cdot v_{xy}$ | **越障能力**：在摆动相奖励足端抬高到指定高度，防止踢到台阶边缘。|
 | **foot_landing_vel**     | $\sum v_{z, impact}^2$ | **柔顺性**：惩罚触地瞬间的 Z 轴速度，鼓励轻柔着陆，减少冲击。|
 
-
-
 ---
 
 ## 2. 算法对比分析：Encoder-MLP vs HIM vs PIM
@@ -595,7 +593,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 4.4 结果与分析 (Results & Analysis)
 
-<img src="images/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:24%;" />
+<img src="images/SDM5008 Report/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:24%;" />
 
 
 ---
@@ -657,10 +655,12 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 ### 5.4 结果与分析 (Results & Analysis)
 
 - **HIM 台阶地形下速度跟随：**
-<img src="images/him_downstairs_1_velocity_tracking.png" alt="him_downstairs_1_velocity_tracking" style="zoom:24%;" />
+
+  <img src="images/him_downstairs_1_velocity_tracking.png" alt="him_downstairs_1_velocity_tracking" style="zoom:24%;" />
 
 - **PIM 台阶地形下速度跟随：**
-<img src="images/pim_stairs_1_velocity_tracking.png" alt="pim_stairs_1_velocity_tracking" style="zoom:24%;" />
+
+  <img src="images/pim_stairs_1_velocity_tracking.png" alt="pim_stairs_1_velocity_tracking" style="zoom:24%;" />
 
 ---
 

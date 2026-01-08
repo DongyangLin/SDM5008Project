@@ -26,6 +26,7 @@ simulation_app = app_launcher.app
 
 import gymnasium as gym
 import os
+import sys
 import torch
 
 from rsl_rl.runner import OnPolicyRunner, HIMOnPolicyRunner, PIMOnPolicyRunner
@@ -36,8 +37,13 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 
 import bipedal_locomotion  # noqa: F401
 from bipedal_locomotion.utils.wrappers.rsl_rl import RslRlPpoAlgorithmMlpCfg, export_mlp_as_onnx, export_policy_as_jit
-from data_recorder import DataRecorder
-from camera import CameraController
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.append(parent_dir)
+
+from utils.data_recorder import DataRecorder
+from utils.camera import CameraController
 
 def main():
     env_cfg: ManagerBasedRLEnvCfg = parse_env_cfg(
