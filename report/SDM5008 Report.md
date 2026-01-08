@@ -353,21 +353,21 @@ Encoder-MLP 直接在纯本体感知条件下进行策略学习，完全依赖�
 
 1. **Encoder-MLP**
   Encoder-MLP 是最基础的盲视策略，依赖本体感知信息估计机器人基座线速度。机器人没有外部感知能力，仅靠本体感知（IMU、关节）行走。
-  <img src="images/SDM5008 Report/image-20260105171415652.png" alt="image-20260105171415652" style="zoom:25%;" />
+  <img src="images/Structure_encoder_mlp.png" alt="Structure_encoder_mlp" style="zoom:61%;" />
   - 可观测信息：关节位置 / 速度、IMU 信息（姿态、角速度）、速度指令等本体感知量。
   - 缺失信息：无任何显式环境感知（如地形高度、台阶结构）。
   - 主要能力：平地或弱起伏地形；地形变化缓慢、可由动力学反馈“滞后补偿”的场景。
 
 2. **HIM (Hybrid Internal Model)** 
   HIM 训练一个基于本体感知历史的**内部模型 (Internal Model/Estimator)**，通过**对比学习**显式地**预测**隐式特权信息，使得 Policy 不仅仅是被 Critic “指导”，而是自身具备了从本体感知中**推理**环境和自身状态的能力。
-  <img src="images/SDM5008 Report/image-20260105170815865.png" alt="image-20260105170815865" style="zoom:70%;" />
+  <img src="images/Structure_him.png" alt="Structure_him" style="zoom:70%;" />
   - Actor：仍然是盲视的，不直接接收地形高度信息；
   - Critic：拥有特权信息（如地形高度扫描），从而提供更准确的价值估计；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
 
 3. **PIM (Perceptive Internal Model)**
   在 HIM 的 Policy 观测量基础上，PIM 的 Policy 观测器引入了外部感知，即视觉（高程图）编码器，构建了一个**多模态的内部模型**。PIM 利用雷达扫描信息来**修正和增强**对环境状态的估计（即构建包含环境信息的内部表征），从而让机器人能够**主动规划落点**以应对盲视无法处理的**剧烈地形变化**（如陡峭楼梯或断崖）。
-  <img src="images/SDM5008 Report/image-20260105170901472.png" alt="image-20260105170901472" style="zoom:58%;" />
+  <img src="images/Structure_pim.png" alt="Structure_pim" style="zoom:58%;" />
   - Actor：Policy 观测中新增 perceptive 观测，同时接收本体与环境感知信息，使 Actor 能够在决策阶段显式利用地形几何结构；
   - Critic：拥有 perceptive 观测以及其他特权信息；
   - Internal Model：作为中介，将 Critic 的“知识”蒸馏到 Actor 的内部状态表示中。
@@ -480,11 +480,11 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 **图 1：线速度 ($v_x, v_y$) 与角速度 ($\omega_z$) 追踪性能**
 
-<img src="images/SDM5008 Report/flat_1_velocity_tracking.png" alt="flat_1_velocity_tracking" style="zoom:23%;" />
+<img src="images/flat_1_velocity_tracking.png" alt="flat_1_velocity_tracking" style="zoom:23%;" />
 
 **图 2：线速度 ($v_x, v_y$) 与角速度 ($\omega_z$) 跟踪误差分布**
 
-<img src="images/SDM5008 Report/flat_2_error_distribution.png" alt="flat_2_error_distribution" style="zoom:25%;" />
+<img src="images/flat_2_error_distribution.png" alt="flat_2_error_distribution" style="zoom:25%;" />
 
 **数据分析:**
 
@@ -512,7 +512,7 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 **图 3：基座姿态角 (Roll & Pitch) 随时间变化**
 
-<img src="images/SDM5008 Report/flat_3_oscillation-1767692293944-1.png" alt="flat_3_oscillation" style="zoom:23%;" />
+<img src="images/flat_3_oscillation-1767692293944-1.png" alt="flat_3_oscillation" style="zoom:23%;" />
 
 **数据分析：**
 
@@ -595,12 +595,72 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 4.4 结果与分析 (Results & Analysis)
 
-<img src="images/SDM5008 Report/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:24%;" />
+<img src="images/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:24%;" />
 
 
 ---
 
 ## 5. 复杂地形适应 (Terrain Traversal)
+
+### 5.1 测试任务描述 (Task Description)
+
+本测试旨在评估所训练 Policy 在非平坦复杂地形条件下的行走稳定性与环境适应能力。相较于平地行走，复杂地形（如台阶、坡道和不规则高度扰动）会对机器人的足端落点选择、躯干姿态控制以及周期性步态协调提出更高要求。
+
+在真实场景中，双足机器人不可避免地需要应对地面高度突变、局部坡度变化以及感知不完全等问题。因此，本实验通过在仿真环境中引入参数化随机地形（Procedural Terrain），系统性地考察策略在地形变化条件下是否能够保持持续行走、不发生跌倒，并维持合理的运动效率和姿态稳定性。
+
+### 5.2 实验设置 (Experimental Setup)
+
+实验基于 Point-Foot 机器人构建，并在 PF 配置下切换不同复杂地形模式。地形由 `terrains_cfg.py` 统一管理，通过高度场（Height Field）方式在仿真中生成。
+
+- **环境配置：**
+
+  使用环境配置文件：`limx_base_env_cfg.py`，`terrains_cfg.py`
+  启用地形感知但不提供显式地形高度输入（Blind Terrain Traversal），主要考察策略的内在动力学鲁棒性。
+
+- **地形类型：**
+  本实验重点测试以下三类具有代表性的复杂地形：
+  - **台阶地形 (Stairs)**
+    地面高度以固定步长周期性变化，用于考察策略对高度突变的适应能力。
+  - **坡道地形 (Slopes)**
+    包含正坡与负坡，主要测试机器人对重力分量变化的补偿能力。
+  - **障碍物地形 (Obstacles)**
+
+  - **随机起伏地形 (Rough Terrain)**
+    地形高度在给定范围内随机扰动，用于模拟自然环境中的不规则地面。
+
+- **地形参数随机化：**
+  - 台阶高度、坡度角度、地形粗糙度在每个 episode 重置时随机采样；
+  - 地形参数分布与训练阶段保持一致，以评估策略的泛化能力。
+
+- **终止条件：**
+  若发生以下任一情况，则认为当前 episode 失败：
+  - 机器人基座与地面发生非期望接触；
+  - 基座姿态角（Roll/Pitch）超过安全阈值；
+  - 机器人速度长期偏离指令值。
+
+### 5.3 考核指标 (Evaluation Metrics)
+
+为定量评估复杂地形适应能力，定义以下评价指标：
+
+- **地形通过率** (Traversal Success Rate, %)
+  在给定地形类型与参数范围内，机器人在固定测试时长内成功完成行走任务（未跌倒）的 episode 占比。该指标反映策略在复杂环境中的整体稳定性。
+
+- **最大可通过地形难度** (Maximum Traversable Terrain Difficulty)
+  对不同地形逐步提高难度参数（如台阶高度、坡度角、地形起伏幅值），记录机器人仍能保持稳定行走的最大参数值，用以衡量策略的适应上限。
+
+- **姿态稳定性指标** (Base Stability Metric)
+  统计行走过程中基座姿态角（Roll / Pitch）的均方根（RMS）值，用于评估机器人在地形扰动下的姿态控制质量。
+
+- **运动连续性** (Gait Continuity)
+  通过分析足端接触序列与步态周期变化，评估策略是否出现明显的停顿、拖步或非周期性异常动作。
+
+### 5.4 结果与分析 (Results & Analysis)
+
+- **HIM 台阶地形下速度跟随：**
+<img src="images/him_downstairs_1_velocity_tracking.png" alt="him_downstairs_1_velocity_tracking" style="zoom:24%;" />
+
+- **PIM 台阶地形下速度跟随：**
+<img src="images/pim_stairs_1_velocity_tracking.png" alt="pim_stairs_1_velocity_tracking" style="zoom:24%;" />
 
 ---
 

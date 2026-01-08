@@ -8,9 +8,11 @@ import matplotlib.colors as mcolors
 
 # 配置 / Config
 csv_file_path = (
-    "logs/rsl_rl/pf_tron_1a_flat/2025-12-15_16-38-07/play_logs/Flat_play_log_mean.csv"
+    # "/logs/rsl_rl/pf_tron_1a_flat/2025-12-15_16-38-07/play_logs/Flat_play_log_mean.csv"
+    # "logs/rsl_rl/pf_pim_stair/2025-12-17_09-56-22/play_logs/play_log_rough.csv"
+    "logs/rsl_rl/pf_him_stair/2025-12-16_Stable_Phase_3/play_logs/play_log_slope.csv"
 )
-experiment_name = "flat"
+experiment_name = "him_slope"
 
 # 绘图风格（学术） / Plot style (academic)
 plt.rcParams["font.family"] = "serif"
@@ -89,7 +91,8 @@ def analyze_robot_data(file_path, smoothing=0.8):
         os.makedirs(save_dir)
 
     print(f"Reading file: {file_path}")
-    data = pd.read_csv(file_path)
+    # 读取数据 / Read data：取前3000行以避免过大文件
+    data = pd.read_csv(file_path, nrows=3001)
 
     # =========================================================
     # 数据预处理：解缠绕 / Data preprocess: unwrap angles
@@ -343,126 +346,126 @@ def analyze_robot_data(file_path, smoothing=0.8):
     # =================================================================
     # 步态相位与外力分析 / Fig 4: Gait Phase Analysis & External Force
     # =================================================================
-    fig4, (ax_phase, ax_force) = plt.subplots(
-        2, 1, figsize=(10, 6), sharex=True, gridspec_kw={"height_ratios": [1, 1]}
-    )
+    # fig4, (ax_phase, ax_force) = plt.subplots(
+    #     2, 1, figsize=(10, 6), sharex=True, gridspec_kw={"height_ratios": [1, 1]}
+    # )
 
-    # -------------------------------------------------------------------------
-    # 步态图 / Subplot 1: Gait Phase Diagram (Contact Patterns)
-    # -------------------------------------------------------------------------
-    # 接触检测 / Data: contact detection
-    contact_threshold = 0.5
-    is_contact_L = data["force_L"] > contact_threshold
-    is_contact_R = data["force_R"] > contact_threshold
+    # # -------------------------------------------------------------------------
+    # # 步态图 / Subplot 1: Gait Phase Diagram (Contact Patterns)
+    # # -------------------------------------------------------------------------
+    # # 接触检测 / Data: contact detection
+    # contact_threshold = 0.5
+    # is_contact_L = data["force_L"] > contact_threshold
+    # is_contact_R = data["force_R"] > contact_threshold
 
-    # 上升沿索引（非接触->接触） / rising-edge indices (no->yes contact)
-    left_on_idx = np.where(np.diff(is_contact_L.astype(int)) == 1)[0] + 1
-    right_on_idx = np.where(np.diff(is_contact_R.astype(int)) == 1)[0] + 1
+    # # 上升沿索引（非接触->接触） / rising-edge indices (no->yes contact)
+    # left_on_idx = np.where(np.diff(is_contact_L.astype(int)) == 1)[0] + 1
+    # right_on_idx = np.where(np.diff(is_contact_R.astype(int)) == 1)[0] + 1
 
-    left_on_times = (
-        time_axis.iloc[left_on_idx].values if len(left_on_idx) > 0 else np.array([])
-    )
-    right_on_times = (
-        time_axis.iloc[right_on_idx].values if len(right_on_idx) > 0 else np.array([])
-    )
+    # left_on_times = (
+    #     time_axis.iloc[left_on_idx].values if len(left_on_idx) > 0 else np.array([])
+    # )
+    # right_on_times = (
+    #     time_axis.iloc[right_on_idx].values if len(right_on_idx) > 0 else np.array([])
+    # )
 
-    # 需要至少2次左脚触地以定义周期 / need >=2 left events to define cycles
-    phase_times = []
-    phase_deg = []
-    if len(left_on_times) > 1 and len(right_on_times) > 0:
-        # 对每个左脚周期，找首个右脚触地 / For each left cycle [L_i, L_{i+1}), find first right on-event
-        for i in range(len(left_on_times) - 1):
-            t0 = left_on_times[i]
-            t1 = left_on_times[i + 1]
-            period = t1 - t0
-            if period <= 0:
-                continue
-            # 区间内的右脚事件掩码 / mask of right events within cycle
-            mask = (right_on_times >= t0) & (right_on_times < t1)
-            if np.any(mask):
-                t_right = right_on_times[np.where(mask)[0][0]]
-                frac = (t_right - t0) / period
-                phase_times.append((t0 + t1) / 2.0)
-                phase_deg.append(frac * 360.0)
-            else:
-                # 无事件则记录 NaN / record NaN if no right event in this cycle
-                phase_times.append((t0 + t1) / 2.0)
-                phase_deg.append(np.nan)
+    # # 需要至少2次左脚触地以定义周期 / need >=2 left events to define cycles
+    # phase_times = []
+    # phase_deg = []
+    # if len(left_on_times) > 1 and len(right_on_times) > 0:
+    #     # 对每个左脚周期，找首个右脚触地 / For each left cycle [L_i, L_{i+1}), find first right on-event
+    #     for i in range(len(left_on_times) - 1):
+    #         t0 = left_on_times[i]
+    #         t1 = left_on_times[i + 1]
+    #         period = t1 - t0
+    #         if period <= 0:
+    #             continue
+    #         # 区间内的右脚事件掩码 / mask of right events within cycle
+    #         mask = (right_on_times >= t0) & (right_on_times < t1)
+    #         if np.any(mask):
+    #             t_right = right_on_times[np.where(mask)[0][0]]
+    #             frac = (t_right - t0) / period
+    #             phase_times.append((t0 + t1) / 2.0)
+    #             phase_deg.append(frac * 360.0)
+    #         else:
+    #             # 无事件则记录 NaN / record NaN if no right event in this cycle
+    #             phase_times.append((t0 + t1) / 2.0)
+    #             phase_deg.append(np.nan)
 
-    if len(phase_times) > 0:
-        ax_phase.plot(
-            phase_times,
-            phase_deg,
-            "-o",
-            color=COLOR_BLUE,
-            markersize=4,
-            linewidth=1.5,
-            label="Phase (deg)",
-        )
+    # if len(phase_times) > 0:
+    #     ax_phase.plot(
+    #         phase_times,
+    #         phase_deg,
+    #         "-o",
+    #         color=COLOR_BLUE,
+    #         markersize=4,
+    #         linewidth=1.5,
+    #         label="Phase (deg)",
+    #     )
 
-        ax_phase.axhline(
-            180.0,
-            color="gray",
-            linestyle="--",
-            linewidth=1.0,
-            alpha=0.7,
-            label="180° (alternation)",
-        )
-        mean_phase = np.nanmean(phase_deg)
-        std_phase = np.nanstd(phase_deg)
-        ax_phase.text(
-            phase_times[0],
-            350,
-            f"Mean: {mean_phase:.1f}°, STD: {std_phase:.1f}°",
-            fontsize=10,
-            fontweight="bold",
-        )
-    else:
-        ax_phase.text(0.5, 0.5, "No valid cycles/events to compute phase", ha="center")
+    #     ax_phase.axhline(
+    #         180.0,
+    #         color="gray",
+    #         linestyle="--",
+    #         linewidth=1.0,
+    #         alpha=0.7,
+    #         label="180° (alternation)",
+    #     )
+    #     mean_phase = np.nanmean(phase_deg)
+    #     std_phase = np.nanstd(phase_deg)
+    #     ax_phase.text(
+    #         phase_times[0],
+    #         350,
+    #         f"Mean: {mean_phase:.1f}°, STD: {std_phase:.1f}°",
+    #         fontsize=10,
+    #         fontweight="bold",
+    #     )
+    # else:
+    #     ax_phase.text(0.5, 0.5, "No valid cycles/events to compute phase", ha="center")
 
-    ax_phase.set_ylim(-10, 370)
-    ax_phase.set_yticks([0, 90, 180, 270, 360])
-    ax_phase.set_ylabel("Phase (degrees)")
-    ax_phase.set_title(
-        "Gait Phase Difference (Right relative to Left)", fontweight="bold"
-    )
-    ax_phase.grid(True, linestyle="--", alpha=0.4)
-    ax_phase.legend(loc="upper right")
+    # ax_phase.set_ylim(-10, 370)
+    # ax_phase.set_yticks([0, 90, 180, 270, 360])
+    # ax_phase.set_ylabel("Phase (degrees)")
+    # ax_phase.set_title(
+    #     "Gait Phase Difference (Right relative to Left)", fontweight="bold"
+    # )
+    # ax_phase.grid(True, linestyle="--", alpha=0.4)
+    # ax_phase.legend(loc="upper right")
 
-    # -------------------------------------------------------------------------
-    # 外力曲线 / Subplot 2: External Force
-    # -------------------------------------------------------------------------
+    # # -------------------------------------------------------------------------
+    # # 外力曲线 / Subplot 2: External Force
+    # # -------------------------------------------------------------------------
 
-    plot_smooth_line(
-        ax_force,
-        time_axis,
-        data["force"],
-        COLOR_RED,
-        "Disturbance Force",
-        0.0,
-    )
+    # plot_smooth_line(
+    #     ax_force,
+    #     time_axis,
+    #     data["force"],
+    #     COLOR_RED,
+    #     "Disturbance Force",
+    #     0.0,
+    # )
     
-    ax_force.set_ylabel("Ext Force (N)", fontsize=10)
-    ax_force.set_xlabel("Time (s)", fontsize=10)
-    ax_force.grid(True, linestyle="--", alpha=0.5)
-    ax_force.legend(loc="upper right")
-    ax_force.set_title("External Disturbance Force over Time", fontweight="bold")
+    # ax_force.set_ylabel("Ext Force (N)", fontsize=10)
+    # ax_force.set_xlabel("Time (s)", fontsize=10)
+    # ax_force.grid(True, linestyle="--", alpha=0.5)
+    # ax_force.legend(loc="upper right")
+    # ax_force.set_title("External Disturbance Force over Time", fontweight="bold")
 
-    force_max = data["force"].max()
-    if force_max > 0:
-        ax_force.set_ylim(-1.0, force_max * 1.2)
-    else:
-        ax_force.set_ylim(-1.0, 10.0)
+    # force_max = data["force"].max()
+    # if force_max > 0:
+    #     ax_force.set_ylim(-1.0, force_max * 1.2)
+    # else:
+    #     ax_force.set_ylim(-1.0, 10.0)
 
-    plt.tight_layout()
-    plt.savefig(
-        os.path.join(save_dir, f"{experiment_name}_4_gait_phase_with_force.png"),
-        dpi=300,
-        bbox_inches="tight",
-    )
-    plt.close(fig4)
+    # plt.tight_layout()
+    # plt.savefig(
+    #     os.path.join(save_dir, f"{experiment_name}_4_gait_phase_with_force.png"),
+    #     dpi=300,
+    #     bbox_inches="tight",
+    # )
+    # plt.close(fig4)
 
-    print(f"Plots saved. Smoothing: {smoothing}")
+    # print(f"Plots saved. Smoothing: {smoothing}")
 
 
 if __name__ == "__main__":

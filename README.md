@@ -30,100 +30,7 @@ Conduct qualitative and quantitative comparisons of multiple motion control algo
 
 ---
 
-## 1. 项目文件结构 / Project File Structure
-
-```
-SDM5008Project/                         # 项目根目录
-├── README.md                           # 项目说明文档方
-├── exts/
-│   └── bipedal_locomotion/             # 主目录
-│       ├── bipedal_locomotion/
-│       │   ├── assets/                 # 机器人与环境相关资源
-│       │   │   ├── config/             # 机器人结构与物理仿真参数配置
-│       │   │   │   ├── pointfoot_cfg.py    # 点足机器人（Point-Foot）
-│       │   │   │   ├── solefoot_cfg.py     # 平足机器人（Sole-Foot）
-│       │   │   │   └── wheelfoot_cfg.py    # 轮足机器人（Wheel-Foot）
-│       │   │   └── usd/                # USD 格式的机器人模型与场景资源
-│       │   ├── tasks/                  # 任务定义模块
-│       │   │   └── locomotion/          # 行走/运动任务
-│       │   │       ├── agents/          # 强化学习智能体配置
-│       │   │       │   └── limx_rsl_rl_ppo_cfg.py
-│       │   │       │       # 基于 RSL-RL 的 PPO 算法超参数配置文件
-│       │   │       ├── cfg/             # 环境与任务配置
-│       │   │       │   ├── PF/           # Point-Foot 机器人任务配置
-│       │   │       │   │   ├── limx_base_env_cfg.py    # 基础行走环境配置（观测、动作空间等）
-│       │   │       │   │   ├── limx_him_base_env_cfg.py    # HIM（Hybrid Internal Model）
-│       │   │       │   │   ├── limx_pim_base_env_cfg.py    # PIM（Pure Internal Model）
-│       │   │       │   │   └── terrains_cfg.py         # 地形参数配置（平地、台阶等）
-│       │   │       │   ├── SF/           # Sole-Foot 机器人任务配置
-│       │   │       │   └── WF/           # Wheel-Foot 机器人任务配置
-│       │   │       ├── mdp/             # MDP（马尔可夫决策过程）定义
-│       │   │       │   ├── commands/         # 速度、方向等高层指令定义
-│       │   │       │   ├── curriculums.py    # 课程学习策略（逐步增加任务难度）
-│       │   │       │   ├── events.py         # 随机扰动与事件触发（推搡、随机重置等）
-│       │   │       │   ├── observations.py   # 观测量定义（状态、历史信息等）
-│       │   │       │   └── rewards.py        # 奖励函数设计（稳定性、能耗、跟踪误差）
-│       │   │       └── robots/           # 机器人环境封装
-│       │   │           ├── __init__.py
-│       │   │           ├── limx_pointfoot_env_cfg.py    # 点足机器人环境定义
-│       │   │           ├── limx_solefoot_env_cfg.py     # 平足机器人环境定义
-│       │   │           └── limx_wheelfoot_env_cfg.py    # 轮足机器人环境定义
-│       │   └── utils/                   # 工具函数
-│       │       ├── random_lag_actuator.py    # 随机执行器时滞建模，提高策略鲁棒性
-│       │       └── wrappers/
-│       │           └── rsl_rl/
-│       │               ├── him_exporter.py   # HIM 模型导出工具
-│       │               ├── pim_exporter.py   # PIM 模型导出工具
-│       │               └── rl_mlp_cfg.py     # 多层感知机（MLP）网络结构配置
-│       ├── config/                      # 扩展级别的全局配置
-│       ├── docs/                        # 项目文档（设计说明、实验说明等）
-│       └── setup.py                     # Isaac Lab 扩展安装脚本
-├── logs/                               # 训练与测试日志
-│   └── rsl_rl/
-│       ├── pf_him_stair/                # 点足 + HIM + 复杂地形实验日志
-│       ├── pf_pim_stair/                # 点足 + PIM + 复杂地形实验日志
-│       └── pf_tron_1a_flat/             # 点足 + Tron 模型 + 平地实验日志
-├── rsl_rl/                             # 强化学习算法实现（基于 RSL-RL）
-│   ├── licenses/
-│   ├── rsl_rl/
-│   │   ├── algorithm/                  # 强化学习算法
-│   │   │   ├── him_ppo.py               # HIM-PPO 算法实现
-│   │   │   ├── pim_ppo.py               # PIM-PPO 算法实现
-│   │   │   └── ppo.py                   # 标准 PPO 算法基类
-│   │   ├── env/
-│   │   │   └── vec_env.py               # 向量化环境接口
-│   │   ├── modules/                    # 网络与模型模块
-│   │   │   ├── actor_critic.py          # Actor-Critic 基础结构
-│   │   │   ├── him_actor_critic.py      # HIM Actor-Critic 网络
-│   │   │   ├── him_estimator.py         # HIM 状态估计器
-│   │   │   ├── mlp_encoder.py           # MLP 编码器
-│   │   │   ├── pim_actor_critic.py      # PIM Actor-Critic 网络
-│   │   │   └── pim_estimator.py         # PIM 状态估计器
-│   │   ├── runner/                     # 训练流程控制
-│   │   │   ├── him_on_policy_runner.py  # HIM 在线策略训练流程
-│   │   │   ├── on_policy_runner.py      # 通用 PPO 训练流程
-│   │   │   └── pim_on_policy_runner.py  # PIM 在线策略训练流程
-│   │   ├── storage/                    # 轨迹与数据存储
-│   │   │   ├── him_rollout_storage.py   # HIM 数据缓存
-│   │   │   ├── pim_rollout_storage.py   # PIM 数据缓存
-│   │   │   └── rollout_storage.py       # 通用 rollout 缓存
-│   │   └── utils/
-│   └── setup.py                         # RSL-RL 包安装脚本
-└── scripts/                            # 实验运行脚本
-    └── rsl_rl/
-        ├── cli_args.py                 # 命令行参数定义
-        ├── play.py                     # 使用训练好的模型进行测试
-        ├── play_him.py                 # HIM 模型测试脚本
-        ├── play_pim.py                 # PIM 模型测试脚本
-        ├── plot_data.py                # 训练曲线与指标可视化
-        ├── train.py                    # 模型训练主脚本
-        └── verify_exported_model.py    # 导出模型正确性验证
-```
-
-
----
-
-## **2. 环境配置与安装 / Environment Setup & Installation**
+## **1. 环境配置与安装 / Environment Setup & Installation**
 
 请参考 IsaacLab 官方文档：[IsaacLab 安装](https://isaac-sim.github.io/IsaacLab/v2.1.0/source/setup/installation/pip_installation.html)
 Please refer to the official IsaacLab documentation: [IsaacLab Installation](https://isaac-sim.github.io/IsaacLab/v2.1.0/source/setup/installation/pip_installation.html)
@@ -174,9 +81,9 @@ Please refer to the official IsaacLab documentation: [IsaacLab Installation](htt
 
 ---
 
-## **3. 训练与测试 / Training & Evaluation**
+## **2. 训练与测试 / Training & Evaluation**
 
-### 3.1 训练机器人 / Training
+### 2.1 训练机器人 / Training
 
 - Encoder-MLP 算法 / Encoder-MLP Algorithm
   使用 `scripts/rsl_rl/train.py` 脚本直接训练机器人，指定任务：
@@ -209,7 +116,7 @@ Please refer to the official IsaacLab documentation: [IsaacLab Installation](htt
     python scripts/rsl_rl/train.py --task=Isaac-Limx-PF-Stair-PIM-v0 --headless
   ```
 
-### 3.2 运行训练好的模型 / Playing a trained model
+### 2.2 运行训练好的模型 / Playing a trained model
 
 - 运行训练好的 Encoder-MLP 模型：
   To play a trained Encoder-MLP model:
@@ -237,20 +144,20 @@ Please refer to the official IsaacLab documentation: [IsaacLab Installation](htt
 
 ---
 
-## **4. 视频演示 / Video Demonstration**
+## **3. 视频演示 / Video Demonstration**
 
-### 4.1 速度跟随 / Velocity Tracking
+### 3.1 速度跟随 / Velocity Tracking
 
 - **点足盲目平地 / Pointfoot Blind Flat**:
   ![Flat Velocity Tracking](./media/Flat_ground_velocity_tracking.gif)
 
-### 4.2 抗扰测试 / Disturbance Rejection
+### 3.2 抗扰测试 / Disturbance Rejection
 
   | Encoder-MLP | HIM | PIM |
   | :---: | :---: | :---: |
   | ![Encoder-MLP Disturbance Rejection](./media/Flat_ground_disturbance_rejection.gif) | ![HIM Disturbance Rejection](./media/HIM_disturbance_rejection.gif) | ![PIM Disturbance Rejection](./media/PIM_disturbance_rejection.gif) |
 
-### 4.3 地形适应 / Terrain Traversal
+### 3.3 地形适应 / Terrain Traversal
 
 - **HIM 地形适应 / HIM Terrain Traversal**
   | ![HIM Stairs](./media/HIM_stairs.gif) | ![HIM Slopes](./media/HIM_slopes.gif) |
@@ -264,6 +171,43 @@ Please refer to the official IsaacLab documentation: [IsaacLab Installation](htt
   | **![PIM Obstacles](./media/PIM_edge.gif)** |
 
 
+
+---
+
+## 4. 项目文件结构 / Project File Structure
+
+```
+SDM5008Project/                         # 项目根目录
+├── README.md                           # 项目说明文档方
+├── exts/
+│   └── bipedal_locomotion/             # 主目录
+│       ├── bipedal_locomotion/
+│       │   ├── assets/                 # 机器人与环境相关资源
+│       │   │   ├── config/             # 机器人结构与物理仿真参数配置
+│       │   │   └── usd/                # USD 格式的机器人模型与场景资源
+│       │   ├── tasks/                  # 任务定义模块
+│       │   │   └── locomotion/          # 行走/运动任务
+│       │   │       ├── agents/          # 强化学习智能体配置
+│       │   │       ├── cfg/             # 环境与任务配置
+│       │   │       │   ├── PF/           # Point-Foot 机器人任务配置
+│       │   │       │   ├── SF/           # Sole-Foot 机器人任务配置
+│       │   │       │   └── WF/           # Wheel-Foot 机器人任务配置
+│       │   │       ├── mdp/             # MDP（马尔可夫决策过程）定义
+│       │   │       └── robots/           # 机器人环境封装
+│       │   └── utils/                   # 工具函数
+│       ├── config/                      # 扩展级别的全局配置
+│       ├── docs/                        # 项目文档（设计说明、实验说明等）
+│       └── setup.py                     # Isaac Lab 扩展安装脚本
+├── logs/                               # 训练与测试日志（包含示例模型）
+├── rsl_rl/                             # 强化学习算法实现（基于 RSL-RL）
+└── scripts/                            # 实验运行脚本
+    └── rsl_rl/
+        ├── play.py                     # 使用训练好的模型进行测试
+        ├── play_him.py                 # HIM 模型测试脚本
+        ├── play_pim.py                 # PIM 模型测试脚本
+        └── train.py                    # 模型训练主脚本
+
+```
 
 ## 致谢 / Acknowledgements
 
