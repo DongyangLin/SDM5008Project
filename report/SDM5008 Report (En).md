@@ -363,7 +363,7 @@ To adapt to different state modeling paradigms, the three methods have correspon
 3.  **PIM (Perceptive Internal Model)**
     Building on HIM's Policy observables, PIM's Policy observer introduces external perception, specifically a visual (elevation map) encoder, constructing a **multimodal internal model**. PIM utilizes lidar scan information to **correct and enhance** the estimation of environmental states (i.e., building an internal representation containing environmental information), thereby allowing the robot to **proactively plan landing points** to cope with **drastic terrain changes** (such as steep stairs or cliffs) that blind methods cannot handle.
     
-    <img src="images/SDM5008 Report/Structure_pim.png" alt="Structure_pim" style="zoom:65%;" />
+    <img src="images/Structure_pim.png" alt="Structure_pim" style="zoom:65%;" />
 
     * Actor: Adds perceptive observations to Policy observation, receiving both proprioceptive and environmental perception info, enabling the Actor to explicitly use terrain geometry in the decision phase;
     * Critic: Possesses perceptive observations and other privileged information;
@@ -598,10 +598,9 @@ To quantify disturbance rejection capability, we defined the following two core 
   <img src="images/Screenshot_him_disturbance_rejection2.png" style="zoom:50%;">
   <img src="images/Screenshot_pim_disturbance_rejection3.png" style="zoom:50%;">
 </div>
-
 **Figure 6: Gait Phase Difference and External Force on Robot over Time:**
 
-<img src="images/SDM5008 Report/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:20%;" />
+<img src="images/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:20%;" />
 
 **Figure 7: Base Attitude Angle over Time under Random Thrust Influence**
 
@@ -805,7 +804,31 @@ To verify the reproducibility, engineering integrity, and scalability of the alg
 
 ---
 
-## References
+## Appendix
+
+**Blind Flat Training Curve**
+
+![flat_training_episode_length](images/flat_training_episode_length.png)
+
+![flat_training_mean_reward](images/flat_training_mean_reward.png)
+
+**HIM Training Curve**
+
+![him_training_episode_length](images/him_training_episode_length.png)
+
+![him_training_mean_reward](images/him_training_mean_reward.png)
+
+![him_training_terrain_level](images/him_training_terrain_level.png)
+
+**PIM Training Curve**
+
+![pim_training_episode_length](images/pim_training_episode_length.png)
+
+![pim_training_mean_reward](images/pim_training_mean_reward.png)
+
+![pim_training_cmd_level](images/pim_training_cmd_level.png)
+
+![pim_training_terrain_level](images/pim_training_terrain_level.png)
 
 [^1]:Long, J., Ren, J., Shi, M., Wang, Z., Huang, T., Luo, P., & Pang, J. (2024). **Learning Humanoid Locomotion with Perceptive Internal Model**. *arXiv preprint arXiv:2411.14386*. https://arxiv.org/abs/2411.14386
 [^2]:Long, J., Wang, Z., Li, Q., Gao, J., Cao, L., & Pang, J. (2024). **Hybrid Internal Model：Learning Agile Legged Locomotion with Simulated Robot Response**. *The Twelfth International Conference on Learning Representations (ICLR)*. https://arxiv.org/abs/2312.11460

@@ -370,7 +370,7 @@ Encoder-MLP 直接在纯本体感知条件下进行策略学习，完全依赖�
 3. **PIM (Perceptive Internal Model)**
     在 HIM 的 Policy 观测量基础上，PIM 的 Policy 观测器引入了外部感知，即视觉（高程图）编码器，构建了一个**多模态的内部模型**。PIM 利用雷达扫描信息来**修正和增强**对环境状态的估计（即构建包含环境信息的内部表征），从而让机器人能够**主动规划落点**以应对盲视无法处理的**剧烈地形变化**（如陡峭楼梯或断崖）。
     
-    <img src="images/SDM5008 Report/Structure_pim.png" alt="Structure_pim" style="zoom:65%;" />
+    <img src="images/Structure_pim.png" alt="Structure_pim" style="zoom:65%;" />
 
   - Actor：Policy 观测中新增 perceptive 观测，同时接收本体与环境感知信息，使 Actor 能够在决策阶段显式利用地形几何结构；
   - Critic：拥有 perceptive 观测以及其他特权信息；
@@ -817,11 +817,33 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 [README.md](../README.md) 中包含项目简介、环境配置指南、训练与测试指令示例、Demo 视频、代码主要框架等。
 
-
-
 ---
 
-## 参考文献
+## 附录
+
+**Blind Flat 训练曲线**
+
+![flat_training_episode_length](images/flat_training_episode_length.png)
+
+![flat_training_mean_reward](images/flat_training_mean_reward.png)
+
+**HIM 训练曲线**
+
+![him_training_episode_length](images/him_training_episode_length.png)
+
+![him_training_mean_reward](images/him_training_mean_reward.png)
+
+![him_training_terrain_level](images/him_training_terrain_level.png)
+
+**PIM 训练曲线**
+
+![pim_training_episode_length](images/pim_training_episode_length.png)
+
+![pim_training_mean_reward](images/pim_training_mean_reward.png)
+
+![pim_training_cmd_level](images/pim_training_cmd_level.png)
+
+![pim_training_terrain_level](images/pim_training_terrain_level.png)
 
 [^1]:Long, J., Ren, J., Shi, M., Wang, Z., Huang, T., Luo, P., & Pang, J. (2024). **Learning Humanoid Locomotion with Perceptive Internal Model**. *arXiv preprint arXiv:2411.14386*. https://arxiv.org/abs/2411.14386
 [^2]:Long, J., Wang, Z., Li, Q., Gao, J., Cao, L., & Pang, J. (2024). **Hybrid Internal Model：Learning Agile Legged Locomotion with Simulated Robot Response**. *The Twelfth International Conference on Learning Representations (ICLR)*. https://arxiv.org/abs/2312.11460
