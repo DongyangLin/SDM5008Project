@@ -472,6 +472,12 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 3.3 实验结果展示 (Experimental Results)
 
+<div style="display:fix; gap:10px; justify-content:center;">
+  <img src="images/Screenshot_flat_ground_velocity_tracking1.png" style="zoom:60%;">
+  <img src="images/Screenshot_flat_ground_velocity_tracking2.png" style="zoom:60%;">
+  <img src="images/Screenshot_flat_ground_velocity_tracking3.png" style="zoom:60%;">
+</div>
+
 使用上述配置训练3000轮后的表现如下。
 
 #### 3.3.1 速度响应曲线 (Velocity Response)
@@ -593,6 +599,12 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 4.4 结果与分析 (Results & Analysis)
 
+<div style="display:fix; gap:10px; justify-content:center;">
+  <img src="images/Screenshot_flat_ground_disturbance_rejection1.png" style="zoom:56%;">
+  <img src="images/Screenshot_him_disturbance_rejection2.png" style="zoom:56%;">
+  <img src="images/Screenshot_pim_disturbance_rejection3.png" style="zoom:56%;">
+</div>
+
 <img src="images/SDM5008 Report/flat_4_gait_phase_with_force.png" alt="flat_4_gait_phase_with_force" style="zoom:24%;" />
 
 
@@ -654,12 +666,30 @@ HIM 和 PIM 的观测量配置分别在代码文件`limx_him_base_env_cfg.py` �
 
 ### 5.4 结果与分析 (Results & Analysis)
 
-- **HIM 台阶地形下速度跟随：**
+- **HIM 复杂地形下速度跟随：**
+  <div style="display:fix; gap:10px; justify-content:center;">
+    <img src="images/Screenshot_him_downstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_him_upstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_him_slopes.png" style="zoom:37%;">
+    <img src="images/Screenshot_him_obstacles.png" style="zoom:56%;">
+    <img src="images/Screenshot_him_rough.png" style="zoom:56%;">
+  </div>
 
+  以台阶地形下数据为例：
   <img src="images/him_downstairs_1_velocity_tracking.png" alt="him_downstairs_1_velocity_tracking" style="zoom:24%;" />
 
-- **PIM 台阶地形下速度跟随：**
+- **PIM 复杂地形下速度跟随：**
 
+  <div style="display:fix; gap:10px; justify-content:center;">
+    <img src="images/Screenshot_pim_downstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_upstairs.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_slopes.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_obstacles.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_rough.png" style="zoom:37%;">
+    <img src="images/Screenshot_pim_edge.png" style="zoom:37%;">
+  </div>
+
+  以台阶地形下数据为例：
   <img src="images/pim_stairs_1_velocity_tracking.png" alt="pim_stairs_1_velocity_tracking" style="zoom:24%;" />
 
 ---
