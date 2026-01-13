@@ -10,15 +10,15 @@ from . import limx_pointfoot_env_cfg
 
 limx_pf_blind_flat_runner_cfg = PF_TRON1AFlatPPORunnerCfg()
 
-# limx_wf_blind_flat_runner_cfg = WF_TRON1AFlatPPORunnerCfg()
+limx_wf_blind_flat_runner_cfg = WF_TRON1AFlatPPORunnerCfg()
 
-# limx_sf_blind_flat_runner_cfg = SF_TRON1AFlatPPORunnerCfg()
+limx_sf_blind_flat_runner_cfg = SF_TRON1AFlatPPORunnerCfg()
 
 limx_pf_stair_runner_cfg = PF_TRON1AStairPPORunnerCfg()
 
-# limx_pf_him_stair_runner_cfg = PF_HIM_PPORunnerCfg()
+limx_pf_him_stair_runner_cfg = PF_HIM_PPORunnerCfg()
 
-# limx_pf_pim_stair_runner_cfg = PF_PIM_PPORunnerCfg()
+limx_pf_pim_stair_runner_cfg = PF_PIM_PPORunnerCfg()
 
 
 
